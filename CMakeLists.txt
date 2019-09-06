@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.13 FATAL_ERROR)
+
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(NOT hasParent)
+	get_filename_component(PARENT_DIR ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY)
+	set_property(GLOBAL PROPERTY GLOBAL_FETCHDEPS_BASE ${PARENT_DIR}/al2o3 )
 	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/out_libs)
 	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/out_bin)
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/out_bin)
@@ -15,26 +18,16 @@ if(NOT hasParent)
 endif ()
 
 SET_MIN_VERSIONS()
-set(LibName 
-project(${LibName})
-
-set(Interface
-		)
+set(ProjectName hermit)
+project(${ProjectName})
 
 set(Src
+		main.cpp
 		)
 
 set(Deps
-    al2o3_platform
+    	al2o3_platform
+		utils_simple_logmanager
+		utils_gameappshell_impl_basic
 		)
-ADD_LIB(${LibName} "${Interface}" "${Src}" "${Deps}")
-
-set( Tests
-		runner.cpp
-		)
-set( TestDeps
-		al2o3_catch2
-
-		utils_simple_logmanager)
-ADD_LIB_TESTS(${LibName} "${Interface}" "${Tests}" "${TestDeps}")
-
+ADD_GUI_APP( ${ProjectName} "${Src}" "${Deps}" gameappshell_interface)
