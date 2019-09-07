@@ -30,5 +30,7 @@ set(Deps
 		utils_simple_logmanager
 		utils_gameappshell_interface
 		utils_gameappshell_impl_basic
+		render_basics_interface
+		render_basics_impl_theforge
 		)
 ADD_GUI_APP( ${ProjectName} "${Src}" "${Deps}" utils_gameappshell_interface)

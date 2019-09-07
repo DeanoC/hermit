@@ -3,6 +3,7 @@
 #include "al2o3_memory/memory.h"
 #include "utils_gameappshell/gameappshell.h"
 #include "utils_simple_logmanager/logmanager.h"
+#include "render_basics/view.h"
 /*#include "al2o3_enki/TaskScheduler_c.h"
 #include "gfx_theforge/theforge.h"
 #include "gfx_imageio/io.h"
