@@ -28,6 +28,7 @@ set(Src
 set(Deps
     	al2o3_platform
 		utils_simple_logmanager
+		utils_gameappshell_interface
 		utils_gameappshell_impl_basic
 		)
-ADD_GUI_APP( ${ProjectName} "${Src}" "${Deps}" gameappshell_interface)
+ADD_GUI_APP( ${ProjectName} "${Src}" "${Deps}" utils_gameappshell_interface)
