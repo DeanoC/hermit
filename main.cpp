@@ -1,10 +1,12 @@
-#include <cstdio> // for sprintf
 #include "al2o3_platform/platform.h"
 #include "al2o3_memory/memory.h"
 #include "utils_gameappshell/gameappshell.h"
 #include "utils_simple_logmanager/logmanager.h"
 #include "render_basics/view.h"
-/*#include "al2o3_enki/TaskScheduler_c.h"
+#include "render_basics/api.h"
+#include "render_basics/theforge/api.h"
+
+#include "al2o3_enki/TaskScheduler_c.h"
 #include "gfx_theforge/theforge.h"
 #include "gfx_imageio/io.h"
 #include "gfx_image/utils.h"
@@ -21,7 +23,7 @@ const uint32_t FRAMES_AHEAD = 3;
 TheForge_RendererHandle renderer;
 TheForge_QueueHandle graphicsQueue;
 TheForge_CmdPoolHandle cmdPool;
-Display_ContextHandle display;
+//Display_ContextHandle display;
 
 ShaderCompiler_ContextHandle shaderCompiler;
 
@@ -37,9 +39,7 @@ enum AppKey {
 
 ImguiBindings_ContextHandle imguiBindings;
 
-TextureViewerHandle textureViewer;
 ImguiBindings_Texture textureToView;
-char* lastFolder;
 
 static void* EnkiAlloc(void* userData, size_t size) {
 	return MEMORY_ALLOCATOR_MALLOC( (Memory_Allocator*)userData, size );
@@ -48,130 +48,10 @@ static void EnkiFree(void* userData, void* ptr) {
 	MEMORY_ALLOCATOR_FREE( (Memory_Allocator*)userData, ptr );
 }
 
-static void LoadTextureToView(char const* fileName)
-{
-	if(textureToView.cpu != nullptr) {
-		Image_Destroy(textureToView.cpu);
-		textureToView.cpu = nullptr;
-	}
-	if(textureToView.gpu != nullptr) {
-		TheForge_RemoveTexture(renderer, textureToView.gpu);
-		textureToView.gpu = nullptr;
-	}
-
-	size_t startOfFileName = 0;
-	size_t startOfFileNameExt = 0;
-
-	Os_SplitPath(fileName, &startOfFileName, &startOfFileNameExt);
-
-	MEMORY_FREE(lastFolder);
-	lastFolder = (char*) MEMORY_CALLOC(startOfFileName+1,1);
-	memcpy(lastFolder, lastFolder, startOfFileName);
-
-
-	VFile_Handle fh = VFile_FromFile(fileName, Os_FM_ReadBinary);
-	if (!fh) {
-		LOGINFOF("Load From File failed for %s", fileName);
-		return;
-	}
-
-	textureToView.cpu = Image_Load(fh);
-	VFile_Close(fh);
-	if(!textureToView.cpu) {
-		LOGINFOF("Image_Load failed for %s", fileName);
-		return;
-	}
-
-	TinyImageFormat originalFormat = textureToView.cpu->format;
-	bool supported = TheForge_CanShaderReadFrom(renderer, textureToView.cpu->format);
-
-	// force CPU for testing
-	// supported = false;
-
-	if(!supported) {
-		// convert to R8G8B8A8 for now
-		if (!TinyImageFormat_IsCompressed(textureToView.cpu->format)) {
-			Image_ImageHeader const* converted = textureToView.cpu;
-			if(TinyImageFormat_IsSigned(textureToView.cpu->format)) {
-				converted = Image_FastConvert(textureToView.cpu, TinyImageFormat_R8G8B8A8_SNORM, true);
-			} else {
-				converted = Image_FastConvert(textureToView.cpu, TinyImageFormat_R8G8B8A8_UNORM, true);
-			}
-			if(converted != textureToView.cpu) {
-				Image_Destroy(textureToView.cpu);
-				textureToView.cpu = converted;
-			}
-		} else {
-			Image_ImageHeader const* converted = textureToView.cpu;
-			converted = Image_Decompress(textureToView.cpu);
-			if(converted == nullptr || converted == textureToView.cpu ) {
-				LOGINFOF("%s with format %s isn't supported by this GPU/backend and can't be converted",
-								 fileName,
-								 TinyImageFormat_Name(textureToView.cpu->format));
-				Image_Destroy(textureToView.cpu);
-				textureToView.cpu = nullptr;
-				return;
-			} else {
-				Image_Destroy(textureToView.cpu);
-				textureToView.cpu = converted;
-			}
-		}
-	}
-
-	if(Image_MipMapCountOf(textureToView.cpu) > 1) {
-		Image_ImageHeader const * packed = Image_PackMipmaps(textureToView.cpu);
-		if(textureToView.cpu != packed) {
-			Image_Destroy(textureToView.cpu);
-			textureToView.cpu = packed;
-		}
-		ASSERT(Image_HasPackedMipMaps(textureToView.cpu));
-	}
-
-	char tmpbuffer[2048];
-	sprintf(tmpbuffer, "%s - %ix%i - %s - %s", fileName + startOfFileName,
-					textureToView.cpu->width,
-					textureToView.cpu->height,
-					TinyImageFormat_Name(originalFormat),
-					supported ? "GPU" : "CPU"
-	);
-
-	TextureViewer_SetWindowName(textureViewer, tmpbuffer);
-	TextureViewer_SetZoom(textureViewer, 768.0f / textureToView.cpu->width);
-
-	// use extended format
-	TheForge_RawImageData rawImageData{
-			(unsigned char *) Image_RawDataPtr(textureToView.cpu),
-			textureToView.cpu->format,
-			textureToView.cpu->width,
-			textureToView.cpu->height,
-			textureToView.cpu->depth,
-			textureToView.cpu->slices,
-			(uint32_t) Image_LinkedImageCountOf(textureToView.cpu),
-			true
-	};
-
-	TheForge_TextureLoadDesc loadDesc{};
-	loadDesc.pRawImageData = &rawImageData;
-	loadDesc.pTexture = &textureToView.gpu;
-	loadDesc.mCreationFlag = TheForge_TCF_OWN_MEMORY_BIT;
-	TheForge_LoadTexture(&loadDesc, false);
-
-}
-
 // Note that shortcuts are currently provided for display only (future version will add flags to BeginMenu to process shortcuts)
 static void ShowMenuFile()
 {
 	if (ImGui::MenuItem("Open", "Ctrl+O")) {
-		char* fileName;
-		if(NativeFileDialogs_Load("ktx,dds,exr,hdr,jpg,jpeg,png,tga,bmp,psd,gif,pic,pnm,ppm", lastFolder, &fileName) ) {
-			if(fileName != nullptr) {
-				char normalisedPath[2048];
-				Os_GetNormalisedPathFromPlatformPath(fileName, normalisedPath, 2048);
-				MEMORY_FREE(fileName);
-				LoadTextureToView(normalisedPath);
-			}
-		}
-
 	}
 	ImGui::Separator();
 	if (ImGui::MenuItem("Quit", "Alt+F4")) {
@@ -191,10 +71,9 @@ static void ShowAppMainMenuBar()
 		ImGui::EndMainMenuBar();
 	}
 }
-*/
 
 static bool Init() {
-/*
+
 #if AL2O3_PLATFORM == AL2O3_PLATFORM_APPLE_MAC
 	//	Os_SetCurrentDir("../.."); // for xcode, no idea...
 	Os_SetCurrentDir("..");
@@ -237,7 +116,7 @@ static bool Init() {
 	TheForge_AddQueue(renderer, &queueDesc, &graphicsQueue);
 	TheForge_AddCmdPool(renderer, graphicsQueue, false, &cmdPool);
 
-	display = Display_Create(renderer, graphicsQueue, cmdPool, FRAMES_AHEAD);
+	//display = Display_Create(renderer, graphicsQueue, cmdPool, FRAMES_AHEAD);
 
 	// init TheForge resourceloader
 	TheForge_InitResourceLoaderInterface(renderer, nullptr);
@@ -256,36 +135,18 @@ static bool Init() {
 	if (keyboard)
 		InputBasic_MapToKey(input, AppKey_Quit, keyboard, InputBasic_Key_Escape);
 
-	static char const DefaultFolder[] = "";
-	lastFolder = (char*) MEMORY_CALLOC(strlen(DefaultFolder)+1,1);
-	memcpy(lastFolder, DefaultFolder, strlen(DefaultFolder));
-
-	imguiBindings = ImguiBindings_Create(renderer, shaderCompiler, input,
+/*	imguiBindings = ImguiBindings_Create(renderer, shaderCompiler, input,
 																			 20,
 																			 FRAMES_AHEAD,
 																			 Display_GetBackBufferFormat(display),
 																			 Display_GetDepthBufferFormat(display),
 																			 TheForge_SC_1,
-																			 0);
+																			 0);*/
 	if (!imguiBindings) {
 		LOGERROR("ImguiBindings_Create failed");
 		return false;
 	}
 
-
-	textureViewer = TextureViewer_Create(renderer,
-																			 shaderCompiler,
-																			 imguiBindings,
-																			 FRAMES_AHEAD,
-																			 Display_GetBackBufferFormat(display),
-																			 Display_GetDepthBufferFormat(display),
-																			 TheForge_SC_1,
-																			 0);
-	if(!textureViewer) {
-		LOGERROR("TextureViewer_Create failed");
-		return false;
-	}
-*/
 	return true;
 }
 
@@ -295,7 +156,7 @@ static bool Load() {
 }
 
 static void Update(double deltaMS) {
-/*	GameAppShell_WindowDesc windowDesc;
+	GameAppShell_WindowDesc windowDesc;
 	GameAppShell_WindowGetCurrentDesc(&windowDesc);
 
 
@@ -316,24 +177,20 @@ static void Update(double deltaMS) {
 	ImGui::NewFrame();
 
 	ShowAppMainMenuBar();
-	if(textureToView.cpu != nullptr) {
-		TextureViewer_DrawUI(textureViewer, &textureToView);
-	}
 
 	ImGui::EndFrame();
 	ImGui::Render();
-*/
+
 }
 
 static void Draw(double deltaMS) {
-/*
+
 	TheForge_RenderTargetHandle renderTarget;
 	TheForge_RenderTargetHandle depthTarget;
 
-	TheForge_CmdHandle cmd = Display_NewFrame(display, &renderTarget, &depthTarget);
+/*	TheForge_CmdHandle cmd = Display_NewFrame(display, &renderTarget, &depthTarget);
 	TheForge_RenderTargetDesc const *renderTargetDesc = TheForge_RenderTargetGetDesc(renderTarget);
 
-	TextureViewer_RenderSetup(textureViewer, cmd);
 
 	TheForge_LoadActionsDesc loadActions = {0};
 	loadActions.loadActionsColor[0] = TheForge_LA_CLEAR;
@@ -355,36 +212,21 @@ static void Draw(double deltaMS) {
 												 renderTargetDesc->width, renderTargetDesc->height);
 
 	ImguiBindings_Render(imguiBindings, cmd);
+*/
 
-
-	Display_Present(display);*/
+//	Display_Present(display);
 }
 
 static void Unload() {
-/*	LOGINFO("Unloading");
+	LOGINFO("Unloading");
 
-	TheForge_WaitQueueIdle(graphicsQueue);*/
+	TheForge_WaitQueueIdle(graphicsQueue);
 }
 
 static void Exit() {
 	LOGINFO("Exiting");
 
-/*	MEMORY_FREE(lastFolder);
-
-
-	TextureViewer_Destroy(textureViewer); textureViewer = nullptr;
-	if(textureToView.cpu) {
-		Image_Destroy(textureToView.cpu);
-		textureToView.cpu = nullptr;
-	}
-	if(textureToView.gpu) {
-		TheForge_RemoveTexture(renderer, textureToView.gpu);
-		textureToView.gpu = nullptr;
-	}
-
 	ImguiBindings_Destroy(imguiBindings);
-
-	TextureViewer_Destroy(textureViewer); textureViewer = nullptr;
 
 	InputBasic_MouseDestroy(mouse);
 	InputBasic_KeyboardDestroy(keyboard);
@@ -392,14 +234,14 @@ static void Exit() {
 
 	TheForge_RemoveResourceLoaderInterface(renderer);
 
-	Display_Destroy(display);
+	//Display_Destroy(display);
 
 	TheForge_RemoveCmdPool(renderer, cmdPool);
 	TheForge_RemoveQueue(graphicsQueue);
 
 	enkiDeleteTaskScheduler(taskScheduler);
 	ShaderCompiler_Destroy(shaderCompiler);
-	TheForge_RendererDestroy(renderer); */
+	TheForge_RendererDestroy(renderer);
 }
 
 static void Abort() {
@@ -408,9 +250,9 @@ static void Abort() {
 }
 
 static void ProcessMsg(void *msg) {
-//	if (input) {
-//		InputBasic_PlatformProcessMsg(input, msg);
-//	}
+	if (input) {
+		InputBasic_PlatformProcessMsg(input, msg);
+	}
 }
 
 int main(int argc, char const *argv[]) {
