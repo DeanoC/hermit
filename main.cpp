@@ -5,6 +5,7 @@
 #include "render_basics/view.h"
 #include "render_basics/api.h"
 #include "render_basics/theforge/api.h"
+#include "render_basics/framebuffer.h"
 
 #include "al2o3_enki/TaskScheduler_c.h"
 #include "gfx_theforge/theforge.h"
@@ -20,12 +21,10 @@
 
 const uint32_t FRAMES_AHEAD = 3;
 
-TheForge_RendererHandle renderer;
-TheForge_QueueHandle graphicsQueue;
-TheForge_CmdPoolHandle cmdPool;
-//Display_ContextHandle display;
-
-ShaderCompiler_ContextHandle shaderCompiler;
+Render_RendererHandle renderer;
+Render_QueueHandle graphicsQueue;
+Render_CmdPoolHandle cmdPool;
+Render_FrameBufferHandle frameBuffer;
 
 InputBasic_ContextHandle input;
 InputBasic_KeyboardHandle keyboard;
@@ -82,44 +81,27 @@ static bool Init() {
 	LOGINFO(currentDir);
 #endif
 
-	// window and renderer setup
-	TheForge_RendererDesc desc{
-			TheForge_ST_6_0,
-			TheForge_GM_SINGLE,
-			TheForge_D3D_FL_12_0,
-	};
-
-	renderer = TheForge_RendererCreate("Devon", &desc);
+	renderer = Render_RendererCreate();
 	if (!renderer) {
-		LOGERROR("TheForge_RendererCreate failed");
-
+		LOGERROR("Render_RendererCreate failed");
 		return false;
-	}
-	shaderCompiler = ShaderCompiler_Create();
-	if (!shaderCompiler) {
-		LOGERROR("ShaderCompiler_Create failed");
-		return false;
-	}
-#ifndef NDEBUG
-	ShaderCompiler_SetOptimizationLevel(shaderCompiler, ShaderCompiler_OPT_None);
-#endif
-	// change from platform default to vulkan if using the vulkan backend
-	if(TheForge_GetRendererApi(renderer) == TheForge_API_VULKAN) {
-		ShaderCompiler_SetOutput(shaderCompiler, ShaderCompiler_OT_SPIRV, 13);
 	}
 
 	taskScheduler = enkiNewTaskScheduler(&EnkiAlloc, &EnkiFree, &Memory_GlobalAllocator);
 
-	// create basic graphics queues fences etc.
-	TheForge_QueueDesc queueDesc{};
-	queueDesc.type = TheForge_CP_DIRECT;
-	TheForge_AddQueue(renderer, &queueDesc, &graphicsQueue);
-	TheForge_AddCmdPool(renderer, graphicsQueue, false, &cmdPool);
+	GameAppShell_WindowDesc windowDesc;
+	GameAppShell_WindowGetCurrentDesc(&windowDesc);
 
-	//display = Display_Create(renderer, graphicsQueue, cmdPool, FRAMES_AHEAD);
-
-	// init TheForge resourceloader
-	TheForge_InitResourceLoaderInterface(renderer, nullptr);
+	Render_FrameBufferDesc fbDesc {};
+	fbDesc.platformHandle = GameAppShell_GetPlatformWindowPtr();
+	fbDesc.queue = Render_RendererGetPrimaryQueue(renderer, RENDER_GQT_GRAPHICS);
+	fbDesc.commandPool = Render_RendererGetPrimaryCommandPool(renderer, RENDER_GQT_GRAPHICS);
+	fbDesc.frameBufferWidth = windowDesc.width;
+	fbDesc.frameBufferHeight = windowDesc.height;
+	fbDesc.frameBufferCount = FRAMES_AHEAD;
+	fbDesc.colourFormat = TinyImageFormat_UNDEFINED;
+	fbDesc.depthFormat = TinyImageFormat_UNDEFINED;
+	frameBuffer = Render_FrameBufferCreate(renderer, &fbDesc);
 
 	// setup basic input and map quit key
 	input = InputBasic_Create();
@@ -135,13 +117,13 @@ static bool Init() {
 	if (keyboard)
 		InputBasic_MapToKey(input, AppKey_Quit, keyboard, InputBasic_Key_Escape);
 
-/*	imguiBindings = ImguiBindings_Create(renderer, shaderCompiler, input,
+	imguiBindings = ImguiBindings_Create(renderer->renderer, renderer->shaderCompiler, input,
 																			 20,
 																			 FRAMES_AHEAD,
-																			 Display_GetBackBufferFormat(display),
-																			 Display_GetDepthBufferFormat(display),
+																			 Render_FrameBufferColourFormat(frameBuffer),
+																			 Render_FrameBufferDepthFormat(frameBuffer),
 																			 TheForge_SC_1,
-																			 0);*/
+																			 0);
 	if (!imguiBindings) {
 		LOGERROR("ImguiBindings_Create failed");
 		return false;
@@ -185,11 +167,11 @@ static void Update(double deltaMS) {
 
 static void Draw(double deltaMS) {
 
-	TheForge_RenderTargetHandle renderTarget;
-	TheForge_RenderTargetHandle depthTarget;
+	Render_RenderTargetHandle renderTarget;
+	Render_RenderTargetHandle depthTarget;
 
-/*	TheForge_CmdHandle cmd = Display_NewFrame(display, &renderTarget, &depthTarget);
-	TheForge_RenderTargetDesc const *renderTargetDesc = TheForge_RenderTargetGetDesc(renderTarget);
+	Render_CmdHandle cmd = Render_FrameBufferNewFrame(frameBuffer, &renderTarget, &depthTarget);
+/*	TheForge_RenderTargetDesc const *renderTargetDesc = TheForge_RenderTargetGetDesc(renderTarget);
 
 
 	TheForge_LoadActionsDesc loadActions = {0};
@@ -214,13 +196,13 @@ static void Draw(double deltaMS) {
 	ImguiBindings_Render(imguiBindings, cmd);
 */
 
-//	Display_Present(display);
+	Render_FrameBufferPresent(frameBuffer);
 }
 
 static void Unload() {
 	LOGINFO("Unloading");
 
-	TheForge_WaitQueueIdle(graphicsQueue);
+// TODO	TheForge_WaitQueueIdle(graphicsQueue);
 }
 
 static void Exit() {
@@ -232,16 +214,10 @@ static void Exit() {
 	InputBasic_KeyboardDestroy(keyboard);
 	InputBasic_Destroy(input);
 
-	TheForge_RemoveResourceLoaderInterface(renderer);
-
-	//Display_Destroy(display);
-
-	TheForge_RemoveCmdPool(renderer, cmdPool);
-	TheForge_RemoveQueue(graphicsQueue);
+	Render_FrameBufferDestroy(frameBuffer);
 
 	enkiDeleteTaskScheduler(taskScheduler);
-	ShaderCompiler_Destroy(shaderCompiler);
-	TheForge_RendererDestroy(renderer);
+	Render_RendererDestroy(renderer);
 }
 
 static void Abort() {
