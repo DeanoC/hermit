@@ -167,34 +167,13 @@ static void Update(double deltaMS) {
 
 static void Draw(double deltaMS) {
 
-	Render_RenderTargetHandle renderTarget;
-	Render_RenderTargetHandle depthTarget;
+	Render_RenderTargetHandle renderTargets[2] = { nullptr, nullptr };
 
-	Render_CmdHandle cmd = Render_FrameBufferNewFrame(frameBuffer, &renderTarget, &depthTarget);
-/*	TheForge_RenderTargetDesc const *renderTargetDesc = TheForge_RenderTargetGetDesc(renderTarget);
+	Render_CmdHandle cmd = Render_FrameBufferNewFrame(frameBuffer, renderTargets + 0, renderTargets + 1);
 
+	Render_CmdBindRenderTargets(cmd, renderTargets[1] ? 2 : 1, renderTargets, true, true, true);
 
-	TheForge_LoadActionsDesc loadActions = {0};
-	loadActions.loadActionsColor[0] = TheForge_LA_CLEAR;
-	loadActions.clearColorValues[0] = {0.45f, 0.5f, 0.6f, 0.0f};
-	loadActions.loadActionDepth = TheForge_LA_CLEAR;
-	loadActions.clearDepth.depth = 1.0f;
-	loadActions.clearDepth.stencil = 0;
-	TheForge_CmdBindRenderTargets(cmd,
-																1,
-																&renderTarget,
-																depthTarget,
-																&loadActions,
-																nullptr, nullptr,
-																-1, -1);
-	TheForge_CmdSetViewport(cmd, 0.0f, 0.0f,
-													(float) renderTargetDesc->width, (float) renderTargetDesc->height,
-													0.0f, 1.0f);
-	TheForge_CmdSetScissor(cmd, 0, 0,
-												 renderTargetDesc->width, renderTargetDesc->height);
-
-	ImguiBindings_Render(imguiBindings, cmd);
-*/
+//	ImguiBindings_Render(imguiBindings, cmd);
 
 	Render_FrameBufferPresent(frameBuffer);
 }
