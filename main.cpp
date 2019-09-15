@@ -2,9 +2,11 @@
 #include "al2o3_memory/memory.h"
 #include "utils_gameappshell/gameappshell.h"
 #include "utils_simple_logmanager/logmanager.h"
-#include "render_basics/view.h"
-#include "render_basics/api.h"
+
 #include "render_basics/theforge/api.h"
+#include "render_basics/api.h"
+#include "render_basics/cmd.h"
+#include "render_basics/view.h"
 #include "render_basics/framebuffer.h"
 
 #include "al2o3_enki/TaskScheduler_c.h"
@@ -94,8 +96,8 @@ static bool Init() {
 
 	Render_FrameBufferDesc fbDesc {};
 	fbDesc.platformHandle = GameAppShell_GetPlatformWindowPtr();
-	fbDesc.queue = Render_RendererGetPrimaryQueue(renderer, RENDER_GQT_GRAPHICS);
-	fbDesc.commandPool = Render_RendererGetPrimaryCommandPool(renderer, RENDER_GQT_GRAPHICS);
+	fbDesc.queue = Render_RendererGetPrimaryQueue(renderer, Render_GQT_GRAPHICS);
+	fbDesc.commandPool = Render_RendererGetPrimaryCommandPool(renderer, Render_GQT_GRAPHICS);
 	fbDesc.frameBufferWidth = windowDesc.width;
 	fbDesc.frameBufferHeight = windowDesc.height;
 	fbDesc.frameBufferCount = FRAMES_AHEAD;
@@ -173,7 +175,7 @@ static void Draw(double deltaMS) {
 
 	Render_CmdBindRenderTargets(cmd, renderTargets[1] ? 2 : 1, renderTargets, true, true, true);
 
-//	ImguiBindings_Render(imguiBindings, cmd);
+	ImguiBindings_Render(imguiBindings, (TheForge_CmdHandle) cmd);
 
 	Render_FrameBufferPresent(frameBuffer);
 }
@@ -193,7 +195,7 @@ static void Exit() {
 	InputBasic_KeyboardDestroy(keyboard);
 	InputBasic_Destroy(input);
 
-	Render_FrameBufferDestroy(frameBuffer);
+	Render_FrameBufferDestroy(renderer, frameBuffer);
 
 	enkiDeleteTaskScheduler(taskScheduler);
 	Render_RendererDestroy(renderer);
