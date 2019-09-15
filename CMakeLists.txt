@@ -38,9 +38,7 @@ set(Deps
 		render_basics_impl_theforge
 		input_basic_interface
 		input_basic_impl_gainput
-		gfx_imgui_al2o3_theforge_bindings
 		gfx_imgui
-		utils_nativefiledialogs
 		gfx_theforge
 		)
 ADD_GUI_APP( ${ProjectName} "${Src}" "${Deps}" utils_gameappshell_interface)

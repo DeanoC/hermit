@@ -11,17 +11,8 @@
 
 #include "al2o3_enki/TaskScheduler_c.h"
 #include "gfx_theforge/theforge.h"
-#include "gfx_imageio/io.h"
-#include "gfx_image/utils.h"
-#include "gfx_shadercompiler/compiler.h"
-#include "al2o3_vfile/vfile.h"
-#include "al2o3_os/filesystem.h"
 #include "input_basic/input.h"
-#include "gfx_imgui_al2o3_theforge_bindings/bindings.h"
 #include "gfx_imgui/imgui.h"
-#include "utils_nativefiledialogs/dialogs.h"
-
-const uint32_t FRAMES_AHEAD = 3;
 
 Render_RendererHandle renderer;
 Render_QueueHandle graphicsQueue;
@@ -38,20 +29,15 @@ enum AppKey {
 	AppKey_Quit
 };
 
-ImguiBindings_ContextHandle imguiBindings;
-
-ImguiBindings_Texture textureToView;
-
-static void* EnkiAlloc(void* userData, size_t size) {
-	return MEMORY_ALLOCATOR_MALLOC( (Memory_Allocator*)userData, size );
+static void *EnkiAlloc(void *userData, size_t size) {
+	return MEMORY_ALLOCATOR_MALLOC((Memory_Allocator *) userData, size);
 }
-static void EnkiFree(void* userData, void* ptr) {
-	MEMORY_ALLOCATOR_FREE( (Memory_Allocator*)userData, ptr );
+static void EnkiFree(void *userData, void *ptr) {
+	MEMORY_ALLOCATOR_FREE((Memory_Allocator *) userData, ptr);
 }
 
 // Note that shortcuts are currently provided for display only (future version will add flags to BeginMenu to process shortcuts)
-static void ShowMenuFile()
-{
+static void ShowMenuFile() {
 	if (ImGui::MenuItem("Open", "Ctrl+O")) {
 	}
 	ImGui::Separator();
@@ -60,12 +46,9 @@ static void ShowMenuFile()
 	}
 }
 
-static void ShowAppMainMenuBar()
-{
-	if (ImGui::BeginMainMenuBar())
-	{
-		if (ImGui::BeginMenu("File"))
-		{
+static void ShowAppMainMenuBar() {
+	if (ImGui::BeginMainMenuBar()) {
+		if (ImGui::BeginMenu("File")) {
 			ShowMenuFile();
 			ImGui::EndMenu();
 		}
@@ -83,7 +66,12 @@ static bool Init() {
 	LOGINFO(currentDir);
 #endif
 
-	renderer = Render_RendererCreate();
+	// setup basic input and map quit key
+	input = InputBasic_Create();
+	uint32_t userIdBlk = InputBasic_AllocateUserIdBlock(input); // 1st 1000 id are the apps
+	ASSERT(userIdBlk == 0);
+
+	renderer = Render_RendererCreate(input);
 	if (!renderer) {
 		LOGERROR("Render_RendererCreate failed");
 		return false;
@@ -94,42 +82,27 @@ static bool Init() {
 	GameAppShell_WindowDesc windowDesc;
 	GameAppShell_WindowGetCurrentDesc(&windowDesc);
 
-	Render_FrameBufferDesc fbDesc {};
-	fbDesc.platformHandle = GameAppShell_GetPlatformWindowPtr();
-	fbDesc.queue = Render_RendererGetPrimaryQueue(renderer, Render_GQT_GRAPHICS);
-	fbDesc.commandPool = Render_RendererGetPrimaryCommandPool(renderer, Render_GQT_GRAPHICS);
-	fbDesc.frameBufferWidth = windowDesc.width;
-	fbDesc.frameBufferHeight = windowDesc.height;
-	fbDesc.frameBufferCount = FRAMES_AHEAD;
-	fbDesc.colourFormat = TinyImageFormat_UNDEFINED;
-	fbDesc.depthFormat = TinyImageFormat_UNDEFINED;
-	frameBuffer = Render_FrameBufferCreate(renderer, &fbDesc);
-
-	// setup basic input and map quit key
-	input = InputBasic_Create();
-	uint32_t userIdBlk = InputBasic_AllocateUserIdBlock(input); // 1st 1000 id are the apps
-	ASSERT(userIdBlk == 0);
-
 	if (InputBasic_GetKeyboardCount(input) > 0) {
 		keyboard = InputBasic_KeyboardCreate(input, 0);
 	}
 	if (InputBasic_GetMouseCount(input) > 0) {
 		mouse = InputBasic_MouseCreate(input, 0);
 	}
-	if (keyboard)
+	if (keyboard) {
 		InputBasic_MapToKey(input, AppKey_Quit, keyboard, InputBasic_Key_Escape);
-
-	imguiBindings = ImguiBindings_Create(renderer->renderer, renderer->shaderCompiler, input,
-																			 20,
-																			 FRAMES_AHEAD,
-																			 Render_FrameBufferColourFormat(frameBuffer),
-																			 Render_FrameBufferDepthFormat(frameBuffer),
-																			 TheForge_SC_1,
-																			 0);
-	if (!imguiBindings) {
-		LOGERROR("ImguiBindings_Create failed");
-		return false;
 	}
+
+	Render_FrameBufferDesc fbDesc{};
+	fbDesc.platformHandle = GameAppShell_GetPlatformWindowPtr();
+	fbDesc.queue = Render_RendererGetPrimaryQueue(renderer, Render_GQT_GRAPHICS);
+	fbDesc.commandPool = Render_RendererGetPrimaryCommandPool(renderer, Render_GQT_GRAPHICS);
+	fbDesc.frameBufferWidth = windowDesc.width;
+	fbDesc.frameBufferHeight = windowDesc.height;
+	fbDesc.frameBufferCount = 3;
+	fbDesc.colourFormat = TinyImageFormat_UNDEFINED;
+	fbDesc.depthFormat = TinyImageFormat_UNDEFINED;
+	fbDesc.embeddedImgui = true;
+	frameBuffer = Render_FrameBufferCreate(renderer, &fbDesc);
 
 	return true;
 }
@@ -143,39 +116,31 @@ static void Update(double deltaMS) {
 	GameAppShell_WindowDesc windowDesc;
 	GameAppShell_WindowGetCurrentDesc(&windowDesc);
 
-
 	InputBasic_SetWindowSize(input, windowDesc.width, windowDesc.height);
-	ImguiBindings_SetWindowSize(imguiBindings,
-															windowDesc.width,
-															windowDesc.height,
-															windowDesc.dpiBackingScale[0],
-															windowDesc.dpiBackingScale[1]);
-
 	InputBasic_Update(input, deltaMS);
 	if (InputBasic_GetAsBool(input, AppKey_Quit)) {
 		GameAppShell_Quit();
 	}
 
-	// Imgui start
-	ImguiBindings_UpdateInput(imguiBindings, deltaMS);
+	Render_FrameBufferUpdate(frameBuffer,
+													 windowDesc.width, windowDesc.height,
+													 windowDesc.dpiBackingScale[0],
+													 windowDesc.dpiBackingScale[1],
+													 deltaMS);
+
 	ImGui::NewFrame();
 
 	ShowAppMainMenuBar();
 
 	ImGui::EndFrame();
 	ImGui::Render();
-
 }
 
 static void Draw(double deltaMS) {
 
-	Render_RenderTargetHandle renderTargets[2] = { nullptr, nullptr };
+	Render_RenderTargetHandle renderTargets[2] = {nullptr, nullptr};
 
 	Render_CmdHandle cmd = Render_FrameBufferNewFrame(frameBuffer, renderTargets + 0, renderTargets + 1);
-
-	Render_CmdBindRenderTargets(cmd, renderTargets[1] ? 2 : 1, renderTargets, true, true, true);
-
-	ImguiBindings_Render(imguiBindings, (TheForge_CmdHandle) cmd);
 
 	Render_FrameBufferPresent(frameBuffer);
 }
@@ -183,19 +148,17 @@ static void Draw(double deltaMS) {
 static void Unload() {
 	LOGINFO("Unloading");
 
-// TODO	TheForge_WaitQueueIdle(graphicsQueue);
+	// TODO	TheForge_WaitQueueIdle(graphicsQueue);
 }
 
 static void Exit() {
 	LOGINFO("Exiting");
 
-	ImguiBindings_Destroy(imguiBindings);
+	Render_FrameBufferDestroy(renderer, frameBuffer);
 
 	InputBasic_MouseDestroy(mouse);
 	InputBasic_KeyboardDestroy(keyboard);
 	InputBasic_Destroy(input);
-
-	Render_FrameBufferDestroy(renderer, frameBuffer);
 
 	enkiDeleteTaskScheduler(taskScheduler);
 	Render_RendererDestroy(renderer);
