@@ -106,6 +106,7 @@ static bool Init() {
 	fbDesc.colourFormat = TinyImageFormat_UNDEFINED;
 	fbDesc.depthFormat = TinyImageFormat_UNDEFINED;
 	fbDesc.embeddedImgui = true;
+	fbDesc.visualDebugTarget = true;
 	frameBuffer = Render_FrameBufferCreate(renderer, &fbDesc);
 
 	return true;
