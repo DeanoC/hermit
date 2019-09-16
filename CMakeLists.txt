@@ -27,6 +27,7 @@ set(Src
 
 set(Deps
     	al2o3_platform
+		al2o3_os
 		al2o3_enki
 		gfx_imageio
 		gfx_image_interface
