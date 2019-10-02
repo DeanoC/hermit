@@ -1,4 +1,5 @@
 #include "al2o3_platform/platform.h"
+#include "al2o3_platform/visualdebug.h"
 #include "al2o3_memory/memory.h"
 #include "utils_gameappshell/gameappshell.h"
 #include "utils_simple_logmanager/logmanager.h"
@@ -39,8 +40,6 @@ static void EnkiFree(void *userData, void *ptr) {
 
 // Note that shortcuts are currently provided for display only (future version will add flags to BeginMenu to process shortcuts)
 static void ShowMenuFile() {
-	if (ImGui::MenuItem("Open", "Ctrl+O")) {
-	}
 	ImGui::Separator();
 	if (ImGui::MenuItem("Quit", "Alt+F4")) {
 		GameAppShell_Quit();
@@ -99,7 +98,6 @@ static bool Init() {
 	fbDesc.commandPool = Render_RendererGetPrimaryCommandPool(renderer, Render_QT_GRAPHICS);
 	fbDesc.frameBufferWidth = windowDesc.width;
 	fbDesc.frameBufferHeight = windowDesc.height;
-	fbDesc.frameBufferCount = 3;
 	fbDesc.colourFormat = TinyImageFormat_UNDEFINED;
 	fbDesc.depthFormat = TinyImageFormat_UNDEFINED;
 	fbDesc.embeddedImgui = true;
@@ -124,11 +122,23 @@ static void Update(double deltaMS) {
 		GameAppShell_Quit();
 	}
 
+	VISDEBUG_LINE(0, 0, 1, 10, 100, 10, VISDEBUG_PACKCOLOUR(255, 255, 255, 255));
+
 	Render_FrameBufferUpdate(frameBuffer,
 													 windowDesc.width, windowDesc.height,
 													 windowDesc.dpiBackingScale[0],
 													 windowDesc.dpiBackingScale[1],
 													 deltaMS);
+	Render_View view {
+			{0, 0, 0},
+			{0, 0, 1},
+			0,
+
+			Math_DegreesToRadiansF(70.0f),
+			(float)windowDesc.width / (float)windowDesc.height,
+			1, 10000
+	};
+	Render_SetFrameBufferDebugView(frameBuffer, &view);
 
 	ImGui::NewFrame();
 
