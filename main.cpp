@@ -17,6 +17,9 @@
 #include "al2o3_os/filesystem.h"
 #endif
 
+static SimpleLogManager_Handle g_logger;
+static int g_returnCode;
+
 Render_RendererHandle renderer;
 Render_FrameBufferHandle frameBuffer;
 
@@ -99,7 +102,6 @@ static bool Init() {
 	fbDesc.commandPool = Render_RendererGetPrimaryCommandPool(renderer, Render_QT_GRAPHICS);
 	fbDesc.frameBufferWidth = windowDesc.width;
 	fbDesc.frameBufferHeight = windowDesc.height;
-	fbDesc.frameBufferCount = 3;
 	fbDesc.colourFormat = TinyImageFormat_UNDEFINED;
 	fbDesc.depthFormat = TinyImageFormat_UNDEFINED;
 	fbDesc.embeddedImgui = true;
@@ -161,6 +163,11 @@ static void Exit() {
 
 	enkiDeleteTaskScheduler(taskScheduler);
 	Render_RendererDestroy(renderer);
+
+	SimpleLogManager_Free(g_logger);
+
+	Memory_TrackerDestroyAndLogLeaks();
+
 }
 
 static void Abort() {
@@ -175,9 +182,9 @@ static void ProcessMsg(void *msg) {
 }
 
 int main(int argc, char const *argv[]) {
-	auto logger = SimpleLogManager_Alloc();
+	g_logger = SimpleLogManager_Alloc();
 
-	GameAppShell_Shell *shell = GameAppShell_Init();
+	GameAppShell_Shell* shell = GameAppShell_Init();
 	shell->onInitCallback = &Init;
 	shell->onDisplayLoadCallback = &Load;
 	shell->onDisplayUnloadCallback = &Unload;
@@ -193,9 +200,8 @@ int main(int argc, char const *argv[]) {
 	shell->initialWindowDesc.windowsFlags = 0;
 	shell->initialWindowDesc.visible = true;
 
-	auto ret = GameAppShell_MainLoop(argc, argv);
+	GameAppShell_MainLoop(argc, argv);
 
-	SimpleLogManager_Free(logger);
-	return ret;
+	return 	g_returnCode;
 
 }
