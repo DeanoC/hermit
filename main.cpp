@@ -124,21 +124,71 @@ static void Update(double deltaMS) {
 	if (InputBasic_GetAsBool(input, AppKey_Quit)) {
 		GameAppShell_Quit();
 	}
+	/*
+		VISDEBUG_LINE(0, 0, 1.0, -1, -1, 1.0, VISDEBUG_PACKCOLOUR(255, 0, 0, 255));
+		VISDEBUG_SOLID_TRI(-1, -1, 1.01,
+											 -1, 1, 1.01,
+											 1, 1, 1.01,
+											 VISDEBUG_PACKCOLOUR(128, 128, 0, 128));
+		VISDEBUG_SOLID_TRI(1, 1, 1.01,
+											 1, -1, 1.01,
+											 -1, -1, 1.01,
+											 VISDEBUG_PACKCOLOUR(255, 0, 255, 255));
 
-	VISDEBUG_LINE(0, 0, 0.5, 10, 100, 0.5, VISDEBUG_PACKCOLOUR(255, 255, 255, 255));
+		float lineStripVerts[] = {
+				-0.5, -0.5, 1.0,
+				 0.5, -0.5, 1.0,
+				 0.5,  0.5, 1.0,
+				-0.5, -0.5, 1.0,
+		};
+		VISDEBUG_LINESTRIP(3, lineStripVerts, VISDEBUG_PACKCOLOUR(0, 255, 0, 255));
+		float lineVerts[] = {
+				-0.6, -0.55, 1.0,
+				0.6, -0.55, 1.0,
+				0.6, -0.55, 1.0,
+				0.6,  0.5, 1.0,
+				0.6,  0.5, 1.0,
+				-0.6, -0.55, 1.0,
+		};
+		VISDEBUG_LINES(3, lineVerts, VISDEBUG_PACKCOLOUR(200, 0, 255, 255));
+	*/
+
+	/*
+		float triVerts[] = {
+				-0.0, -0.5, 1.0,
+				-0.5, -0.5, 1.0,
+				-0.0,  0.0, 1.0,
+
+				 0.0,  0.5, 1.0,
+				 0.5,  0.5, 1.0,
+				 0.0,  0.0, 1.0,
+		};
+		VISDEBUG_SOLID_TRIS(2, triVerts, VISDEBUG_PACKCOLOUR(128, 128, 128, 128)); */
+	float quadVerts[] = {
+			-0.0, -0.5, 3.0,
+			-0.5, -0.5, 3.0,
+			-0.5, 0.0, 3.0,
+			-0.0, -0.0, 3.0,
+
+			0.0, 0.5, 10.0,
+			0.5, 0.5, 10.0,
+			0.5, 0.0, 10.0,
+			0.0, 0.0, 10.0,
+	};
+	VISDEBUG_SOLID_QUADS(2, quadVerts, 0);
 
 	Render_FrameBufferUpdate(frameBuffer,
 													 windowDesc.width, windowDesc.height,
 													 windowDesc.dpiBackingScale[0],
 													 windowDesc.dpiBackingScale[1],
 													 deltaMS);
-	Render_View view {
+	Render_View view{
+			{0, 0, -9},
 			{0, 0, 0},
-			{0, 0, 1},
-			0,
+			{0, 1, 0},
 
 			Math_DegreesToRadiansF(70.0f),
-			(float)windowDesc.width / (float)windowDesc.height,
+			(float) windowDesc.width / (float) windowDesc.height,
 			1, 10000
 	};
 	Render_SetFrameBufferDebugView(frameBuffer, &view);
@@ -195,7 +245,9 @@ static void ProcessMsg(void *msg) {
 int main(int argc, char const *argv[]) {
 	g_logger = SimpleLogManager_Alloc();
 
-	GameAppShell_Shell* shell = GameAppShell_Init();
+	Memory_TrackerBreakOnAllocNumber = 0;
+
+	GameAppShell_Shell *shell = GameAppShell_Init();
 	shell->onInitCallback = &Init;
 	shell->onDisplayLoadCallback = &Load;
 	shell->onDisplayUnloadCallback = &Unload;
@@ -213,6 +265,6 @@ int main(int argc, char const *argv[]) {
 
 	GameAppShell_MainLoop(argc, argv);
 
-	return 	g_returnCode;
+	return g_returnCode;
 
 }
