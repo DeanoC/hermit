@@ -125,7 +125,7 @@ static void Update(double deltaMS) {
 		GameAppShell_Quit();
 	}
 
-	VISDEBUG_LINE(0, 0, 1, 10, 100, 10, VISDEBUG_PACKCOLOUR(255, 255, 255, 255));
+	VISDEBUG_LINE(0, 0, 0.5, 10, 100, 0.5, VISDEBUG_PACKCOLOUR(255, 255, 255, 255));
 
 	Render_FrameBufferUpdate(frameBuffer,
 													 windowDesc.width, windowDesc.height,
