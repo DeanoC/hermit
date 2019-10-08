@@ -102,7 +102,7 @@ static bool Init() {
 	fbDesc.frameBufferWidth = windowDesc.width;
 	fbDesc.frameBufferHeight = windowDesc.height;
 	fbDesc.colourFormat = TinyImageFormat_UNDEFINED;
-	fbDesc.depthFormat = TinyImageFormat_UNDEFINED;
+	fbDesc.depthFormat = TinyImageFormat_D32_SFLOAT;
 	fbDesc.embeddedImgui = true;
 	fbDesc.visualDebugTarget = true;
 	frameBuffer = Render_FrameBufferCreate(renderer, &fbDesc);
@@ -178,16 +178,24 @@ static void Update(double deltaMS) {
 	VISDEBUG_SOLID_QUADS(2, quadVerts, 0);*/
 	static float xpos = 0.0f;
 	static float scalef = 1.0f;
-	Math_Vec3F pos = { xpos,0, 0};
+	static float rotf = 0.0f;
+	Math_Vec3F pos = { sinf(xpos) * 3,0, 0};
 	Math_Vec3F rot = {0,0,0};
-	Math_Vec3F scale = {sinf(scalef)+1,sinf(scalef)+1, sinf(scalef)+1};
-	VISDEBUG_TETRAHEDRON(pos.v, rot.v, scale.v, 0);
-	Math_Vec3F pos2 = { xpos,3, 0};
-	Math_Vec3F scale2 = {1, 1, 1};
-	VISDEBUG_TETRAHEDRON(pos2.v, rot.v, scale2.v, 0);
+	Math_Vec3F scale = {1, 1, 1};
+	VISDEBUG_CUBE(pos.v, rot.v, scale.v, 0);
+	Math_Vec3F pos2 = { sinf(xpos) * 3,3, 0};
+	Math_Vec3F scale2 = {sinf(scalef)+1,sinf(scalef)+1, sinf(scalef)+1};
+	VISDEBUG_CUBE(pos2.v, rot.v, scale2.v, 0);
+	Math_Vec3F pos3 = { sinf(xpos) * 3,-3, 0};
+	Math_Vec3F rot2 = {rotf * Math_PiF(), 0,rotf * Math_PiF()};
+	VISDEBUG_CUBE(pos3.v, rot2.v, scale.v, 0);
+	Math_Vec3F pos4 = { sinf(xpos) * 3 + 4,-3, 0};
+	VISDEBUG_CUBE(pos4.v, rot2.v, scale2.v, 0);
+
 
 	xpos += 0.001f;
-	scalef += 0.01f;
+	scalef += 0.005f;
+	rotf += 0.001f;
 
 	Render_FrameBufferUpdate(frameBuffer,
 													 windowDesc.width, windowDesc.height,
@@ -195,7 +203,7 @@ static void Update(double deltaMS) {
 													 windowDesc.dpiBackingScale[1],
 													 deltaMS);
 	Render_View view{
-			{0, 3, -9},
+			{0, 0, -9},
 			{0, 0, 0},
 			{0, 1, 0},
 
