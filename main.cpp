@@ -164,7 +164,7 @@ static void Update(double deltaMS) {
 				 0.0,  0.0, 1.0,
 		};
 		VISDEBUG_SOLID_TRIS(2, triVerts, VISDEBUG_PACKCOLOUR(128, 128, 128, 128)); */
-	float quadVerts[] = {
+/*	float quadVerts[] = {
 			-0.0, -0.5, 3.0,
 			-0.5, -0.5, 3.0,
 			-0.5, 0.0, 3.0,
@@ -175,7 +175,11 @@ static void Update(double deltaMS) {
 			0.5, 0.0, 10.0,
 			0.0, 0.0, 10.0,
 	};
-	VISDEBUG_SOLID_QUADS(2, quadVerts, 0);
+	VISDEBUG_SOLID_QUADS(2, quadVerts, 0);*/
+	Math_Vec3F pos = { 0,0, 0};
+	Math_Vec3F rot = {0,0,0};
+	Math_Vec3F scale = {1,1,1};
+	VISDEBUG_TETRAHEDRON(pos.v, rot.v, scale.v, 0);
 
 	Render_FrameBufferUpdate(frameBuffer,
 													 windowDesc.width, windowDesc.height,
