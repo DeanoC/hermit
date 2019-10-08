@@ -176,10 +176,18 @@ static void Update(double deltaMS) {
 			0.0, 0.0, 10.0,
 	};
 	VISDEBUG_SOLID_QUADS(2, quadVerts, 0);*/
-	Math_Vec3F pos = { 0,0, 0};
+	static float xpos = 0.0f;
+	static float scalef = 1.0f;
+	Math_Vec3F pos = { xpos,0, 0};
 	Math_Vec3F rot = {0,0,0};
-	Math_Vec3F scale = {1,1,1};
+	Math_Vec3F scale = {sinf(scalef)+1,sinf(scalef)+1, sinf(scalef)+1};
 	VISDEBUG_TETRAHEDRON(pos.v, rot.v, scale.v, 0);
+	Math_Vec3F pos2 = { xpos,3, 0};
+	Math_Vec3F scale2 = {1, 1, 1};
+	VISDEBUG_TETRAHEDRON(pos2.v, rot.v, scale2.v, 0);
+
+	xpos += 0.001f;
+	scalef += 0.01f;
 
 	Render_FrameBufferUpdate(frameBuffer,
 													 windowDesc.width, windowDesc.height,
@@ -187,7 +195,7 @@ static void Update(double deltaMS) {
 													 windowDesc.dpiBackingScale[1],
 													 deltaMS);
 	Render_View view{
-			{0, 0, -9},
+			{0, 3, -9},
 			{0, 0, 0},
 			{0, 1, 0},
 
