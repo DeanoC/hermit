@@ -182,15 +182,19 @@ static void Update(double deltaMS) {
 	Math_Vec3F pos = { sinf(xpos) * 3,0, 0};
 	Math_Vec3F rot = {0,0,0};
 	Math_Vec3F scale = {1, 1, 1};
-	VISDEBUG_CUBE(pos.v, rot.v, scale.v, 0);
+	VISDEBUG_TETRAHEDRON(pos.v, rot.v, scale.v, 0);
 	Math_Vec3F pos2 = { sinf(xpos) * 3,3, 0};
 	Math_Vec3F scale2 = {sinf(scalef)+1,sinf(scalef)+1, sinf(scalef)+1};
-	VISDEBUG_CUBE(pos2.v, rot.v, scale2.v, 0);
+	VISDEBUG_OCTAHEDRON(pos2.v, rot.v, scale2.v, 0);
 	Math_Vec3F pos3 = { sinf(xpos) * 3,-3, 0};
 	Math_Vec3F rot2 = {rotf * Math_PiF(), 0,rotf * Math_PiF()};
-	VISDEBUG_CUBE(pos3.v, rot2.v, scale.v, 0);
+	VISDEBUG_ICOSAHEDRON(pos3.v, rot2.v, scale.v, 0);
 	Math_Vec3F pos4 = { sinf(xpos) * 3 + 4,-3, 0};
 	VISDEBUG_CUBE(pos4.v, rot2.v, scale2.v, 0);
+	Math_Vec3F pos5 = { sinf(xpos) * 3 - 4,-3, 0};
+	VISDEBUG_TETRAHEDRON(pos5.v, rot2.v, scale.v, 0);
+	Math_Vec3F pos6 = { sinf(xpos) * 3 - 4,3, 0};
+	VISDEBUG_DODECAHEDRON(pos6.v, rot2.v, scale.v, 0);
 
 
 	xpos += 0.001f;
