@@ -20,7 +20,11 @@ project(${ProjectName})
 
 set(Src
 		main.cpp
+		visualdebugtests.cpp
 		)
+if(APPLE)
+	list( APPEND Src Info.plist.in)
+endif()
 
 set(Deps
     	al2o3_platform
@@ -39,4 +43,4 @@ set(Deps
 		gfx_imgui
 		gfx_theforge
 		)
-ADD_GUI_APP( ${ProjectName} "${Src}" "${Deps}" utils_gameappshell_interface)
+ADD_GUI_APP( ${ProjectName} "${Src}" "${Deps}")

@@ -1,3 +1,4 @@
+#include <cstdio>
 #include "al2o3_platform/platform.h"
 #include "al2o3_platform/visualdebug.h"
 #include "al2o3_memory/memory.h"
@@ -18,8 +19,12 @@
 #include "al2o3_os/filesystem.h"
 #endif
 
-static SimpleLogManager_Handle g_logger;
-static int g_returnCode;
+extern void VisualDebugTests();
+
+SimpleLogManager_Handle g_logger;
+int g_returnCode;
+
+bool bDoVisualDebugTests = false;
 
 Render_RendererHandle renderer;
 Render_FrameBufferHandle frameBuffer;
@@ -31,8 +36,17 @@ InputBasic_MouseHandle mouse;
 enkiTaskSchedulerHandle taskScheduler;
 
 enum AppKey {
-	AppKey_Quit
+	AppKey_Quit,
+	AppKey_GPUCapture
 };
+
+enum class GpuCaptureState {
+	NotCapturing,
+	StartCapturing,
+	Capturing
+};
+
+GpuCaptureState gpuCaptureState = GpuCaptureState::NotCapturing;
 
 static void *EnkiAlloc(void *userData, size_t size) {
 	return MEMORY_ALLOCATOR_MALLOC((Memory_Allocator *) userData, size);
@@ -41,7 +55,6 @@ static void EnkiFree(void *userData, void *ptr) {
 	MEMORY_ALLOCATOR_FREE((Memory_Allocator *) userData, ptr);
 }
 
-// Note that shortcuts are currently provided for display only (future version will add flags to BeginMenu to process shortcuts)
 static void ShowMenuFile() {
 	ImGui::Separator();
 	if (ImGui::MenuItem("Quit", "Alt+F4")) {
@@ -49,10 +62,19 @@ static void ShowMenuFile() {
 	}
 }
 
+static void ShowTestsFile() {
+	ImGui::Separator();
+	ImGui::Checkbox("Visual Debug Tests", &bDoVisualDebugTests);
+}
+
 static void ShowAppMainMenuBar() {
 	if (ImGui::BeginMainMenuBar()) {
 		if (ImGui::BeginMenu("File")) {
 			ShowMenuFile();
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Tests")) {
+			ShowTestsFile();
 			ImGui::EndMenu();
 		}
 		ImGui::EndMainMenuBar();
@@ -93,6 +115,7 @@ static bool Init() {
 	}
 	if (keyboard) {
 		InputBasic_MapToKey(input, AppKey_Quit, keyboard, InputBasic_Key_Escape);
+		InputBasic_MapToKey(input, AppKey_GPUCapture, keyboard, InputBasic_Key_Tab);
 	}
 
 	Render_FrameBufferDesc fbDesc{};
@@ -102,7 +125,7 @@ static bool Init() {
 	fbDesc.frameBufferWidth = windowDesc.width;
 	fbDesc.frameBufferHeight = windowDesc.height;
 	fbDesc.colourFormat = TinyImageFormat_UNDEFINED;
-	fbDesc.depthFormat = TinyImageFormat_D32_SFLOAT;
+	fbDesc.depthFormat = TinyImageFormat_UNDEFINED;
 	fbDesc.embeddedImgui = true;
 	fbDesc.visualDebugTarget = true;
 	frameBuffer = Render_FrameBufferCreate(renderer, &fbDesc);
@@ -124,87 +147,16 @@ static void Update(double deltaMS) {
 	if (InputBasic_GetAsBool(input, AppKey_Quit)) {
 		GameAppShell_Quit();
 	}
-	/*
-		VISDEBUG_LINE(0, 0, 1.0, -1, -1, 1.0, VISDEBUG_PACKCOLOUR(255, 0, 0, 255));
-		VISDEBUG_SOLID_TRI(-1, -1, 1.01,
-											 -1, 1, 1.01,
-											 1, 1, 1.01,
-											 VISDEBUG_PACKCOLOUR(128, 128, 0, 128));
-		VISDEBUG_SOLID_TRI(1, 1, 1.01,
-											 1, -1, 1.01,
-											 -1, -1, 1.01,
-											 VISDEBUG_PACKCOLOUR(255, 0, 255, 255));
+	if (InputBasic_GetAsBool(input, AppKey_GPUCapture)) {
+		gpuCaptureState = GpuCaptureState::StartCapturing;
+	}
 
-		float lineStripVerts[] = {
-				-0.5, -0.5, 1.0,
-				 0.5, -0.5, 1.0,
-				 0.5,  0.5, 1.0,
-				-0.5, -0.5, 1.0,
-		};
-		VISDEBUG_LINESTRIP(3, lineStripVerts, VISDEBUG_PACKCOLOUR(0, 255, 0, 255));
-		float lineVerts[] = {
-				-0.6, -0.55, 1.0,
-				0.6, -0.55, 1.0,
-				0.6, -0.55, 1.0,
-				0.6,  0.5, 1.0,
-				0.6,  0.5, 1.0,
-				-0.6, -0.55, 1.0,
-		};
-		VISDEBUG_LINES(3, lineVerts, VISDEBUG_PACKCOLOUR(200, 0, 255, 255));
-	*/
-
-	/*
-		float triVerts[] = {
-				-0.0, -0.5, 1.0,
-				-0.5, -0.5, 1.0,
-				-0.0,  0.0, 1.0,
-
-				 0.0,  0.5, 1.0,
-				 0.5,  0.5, 1.0,
-				 0.0,  0.0, 1.0,
-		};
-		VISDEBUG_SOLID_TRIS(2, triVerts, VISDEBUG_PACKCOLOUR(128, 128, 128, 128)); */
-/*	float quadVerts[] = {
-			-0.0, -0.5, 3.0,
-			-0.5, -0.5, 3.0,
-			-0.5, 0.0, 3.0,
-			-0.0, -0.0, 3.0,
-
-			0.0, 0.5, 10.0,
-			0.5, 0.5, 10.0,
-			0.5, 0.0, 10.0,
-			0.0, 0.0, 10.0,
-	};
-	VISDEBUG_SOLID_QUADS(2, quadVerts, 0);*/
-	static float xpos = 0.0f;
-	static float scalef = 1.0f;
-	static float rotf = 0.0f;
-	Math_Vec3F pos = { sinf(xpos) * 3,0, 0};
-	Math_Vec3F rot = {0,0,0};
-	Math_Vec3F scale = {1, 1, 1};
-	VISDEBUG_TETRAHEDRON(pos.v, rot.v, scale.v, 0);
-	Math_Vec3F pos2 = { sinf(xpos) * 3,3, 0};
-	Math_Vec3F scale2 = {sinf(scalef)+1,sinf(scalef)+1, sinf(scalef)+1};
-	VISDEBUG_OCTAHEDRON(pos2.v, rot.v, scale2.v, 0);
-	Math_Vec3F pos3 = { sinf(xpos) * 3,-3, 0};
-	Math_Vec3F rot2 = {rotf * Math_PiF(), 0,rotf * Math_PiF()};
-	VISDEBUG_ICOSAHEDRON(pos3.v, rot2.v, scale.v, 0);
-	Math_Vec3F pos4 = { sinf(xpos) * 3 + 4,-3, 0};
-	VISDEBUG_CUBE(pos4.v, rot2.v, scale2.v, 0);
-	Math_Vec3F pos5 = { sinf(xpos) * 3 - 4,-3, 0};
-	VISDEBUG_TETRAHEDRON(pos5.v, rot2.v, scale.v, 0);
-	Math_Vec3F pos6 = { sinf(xpos) * 3 - 4,3, 0};
-	VISDEBUG_DODECAHEDRON(pos6.v, rot2.v, scale.v, 0);
-
-
-	xpos += 0.001f;
-	scalef += 0.005f;
-	rotf += 0.001f;
+	if(bDoVisualDebugTests) {
+		VisualDebugTests();
+	}
 
 	Render_FrameBufferUpdate(frameBuffer,
 													 windowDesc.width, windowDesc.height,
-													 windowDesc.dpiBackingScale[0],
-													 windowDesc.dpiBackingScale[1],
 													 deltaMS);
 	Render_View view{
 			{0, 0, -9},
@@ -226,9 +178,24 @@ static void Update(double deltaMS) {
 }
 
 static void Draw(double deltaMS) {
+	if(gpuCaptureState == GpuCaptureState::StartCapturing) {
+		char curpath[2048];
+		Os_GetCurrentDir(curpath, 2048);
+		char path[2048];
+		sprintf(path,"%s/%s", curpath, "capture.gputrace");
+		Render_RendererStartGpuCapture(renderer, path);
+		gpuCaptureState = GpuCaptureState::Capturing;
+	}
+
 	Render_FrameBufferNewFrame(frameBuffer);
 
 	Render_FrameBufferPresent(frameBuffer);
+
+	if(gpuCaptureState == GpuCaptureState::Capturing) {
+		Render_RendererEndGpuCapture(renderer);
+		gpuCaptureState = GpuCaptureState::NotCapturing;
+	}
+
 }
 
 static void Unload() {
