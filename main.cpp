@@ -23,6 +23,7 @@ SimpleLogManager_Handle g_logger;
 int g_returnCode;
 
 bool bDoVisualDebugTests = false;
+bool bDoSynthWaveVizTests = false;
 
 Render_RendererHandle renderer;
 Render_FrameBufferHandle frameBuffer;
@@ -63,6 +64,7 @@ static void ShowMenuFile() {
 static void ShowTestsFile() {
 	ImGui::Separator();
 	ImGui::Checkbox("Visual Debug Tests", &bDoVisualDebugTests);
+	ImGui::Checkbox("SynthWave viz tests", &bDoSynthWaveVizTests);
 }
 
 static void ShowAppMainMenuBar() {
@@ -111,6 +113,7 @@ static bool Init() {
 	if (InputBasic_GetMouseCount(input) > 0) {
 		mouse = InputBasic_MouseCreate(input, 0);
 	}
+
 	if (keyboard) {
 		InputBasic_MapToKey(input, AppKey_Quit, keyboard, InputBasic_Key_Escape);
 		InputBasic_MapToKey(input, AppKey_GPUCapture, keyboard, InputBasic_Key_Tab);
@@ -131,7 +134,23 @@ static bool Init() {
 	return true;
 }
 
-static bool Load() {
+static bool Resize() {
+	GameAppShell_WindowDesc windowDesc;
+	GameAppShell_WindowGetCurrentDesc(&windowDesc);
+
+	Render_FrameBufferDestroy(renderer, frameBuffer);
+
+	Render_FrameBufferDesc fbDesc{};
+	fbDesc.platformHandle = GameAppShell_GetPlatformWindowPtr();
+	fbDesc.queue = Render_RendererGetPrimaryQueue(renderer, Render_QT_GRAPHICS);
+	fbDesc.commandPool = Render_RendererGetPrimaryCommandPool(renderer, Render_QT_GRAPHICS);
+	fbDesc.frameBufferWidth = windowDesc.width;
+	fbDesc.frameBufferHeight = windowDesc.height;
+	fbDesc.colourFormat = TinyImageFormat_UNDEFINED;
+	fbDesc.depthFormat = TinyImageFormat_UNDEFINED;
+	fbDesc.embeddedImgui = true;
+	fbDesc.visualDebugTarget = true;
+	frameBuffer = Render_FrameBufferCreate(renderer, &fbDesc);
 
 	return true;
 }
@@ -196,12 +215,6 @@ static void Draw(double deltaMS) {
 
 }
 
-static void Unload() {
-	LOGINFO("Unloading");
-
-	// TODO	TheForge_WaitQueueIdle(graphicsQueue);
-}
-
 static void Exit() {
 	LOGINFO("Exiting");
 
@@ -238,15 +251,14 @@ int main(int argc, char const *argv[]) {
 
 	GameAppShell_Shell *shell = GameAppShell_Init();
 	shell->onInitCallback = &Init;
-	shell->onDisplayLoadCallback = &Load;
-	shell->onDisplayUnloadCallback = &Unload;
+	shell->onDisplayResizeCallback = &Resize;
 	shell->onQuitCallback = &Exit;
 	shell->onAbortCallback = &Abort;
 	shell->perFrameUpdateCallback = &Update;
 	shell->perFrameDrawCallback = &Draw;
 	shell->onMsgCallback = &ProcessMsg;
 
-	shell->initialWindowDesc.name = "Devon";
+	shell->initialWindowDesc.name = "Hermit";
 	shell->initialWindowDesc.width = -1;
 	shell->initialWindowDesc.height = -1;
 	shell->initialWindowDesc.windowsFlags = 0;

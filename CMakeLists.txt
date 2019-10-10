@@ -21,6 +21,7 @@ project(${ProjectName})
 set(Src
 		main.cpp
 		visualdebugtests.cpp
+		synthwavvizetests.cpp
 		)
 if(APPLE)
 	list( APPEND Src Info.plist.in entitlements.plist)
