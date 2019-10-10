@@ -23,7 +23,7 @@ set(Src
 		visualdebugtests.cpp
 		)
 if(APPLE)
-	list( APPEND Src Info.plist.in)
+	list( APPEND Src Info.plist.in entitlements.plist)
 endif()
 
 set(Deps
