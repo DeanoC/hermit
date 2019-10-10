@@ -15,9 +15,7 @@
 #include "input_basic/input.h"
 #include "gfx_imgui/imgui.h"
 
-#if AL2O3_PLATFORM == AL2O3_PLATFORM_APPLE_MAC
 #include "al2o3_os/filesystem.h"
-#endif
 
 extern void VisualDebugTests();
 
