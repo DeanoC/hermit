@@ -41,6 +41,7 @@ set(Deps
 		render_basics_impl_theforge
 		render_meshmod
 		render_meshmodio
+		render_meshmodplatonicsolids
 		input_basic_interface
 		input_basic_impl_gainput
 		gfx_imgui
