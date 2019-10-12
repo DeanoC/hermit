@@ -134,32 +134,17 @@ static bool Init() {
 	return true;
 }
 
-static bool Resize() {
+static void Resize() {
 	GameAppShell_WindowDesc windowDesc;
 	GameAppShell_WindowGetCurrentDesc(&windowDesc);
 
-	Render_FrameBufferDestroy(renderer, frameBuffer);
-
-	Render_FrameBufferDesc fbDesc{};
-	fbDesc.platformHandle = GameAppShell_GetPlatformWindowPtr();
-	fbDesc.queue = Render_RendererGetPrimaryQueue(renderer, Render_QT_GRAPHICS);
-	fbDesc.commandPool = Render_RendererGetPrimaryCommandPool(renderer, Render_QT_GRAPHICS);
-	fbDesc.frameBufferWidth = windowDesc.width;
-	fbDesc.frameBufferHeight = windowDesc.height;
-	fbDesc.colourFormat = TinyImageFormat_UNDEFINED;
-	fbDesc.depthFormat = TinyImageFormat_UNDEFINED;
-	fbDesc.embeddedImgui = true;
-	fbDesc.visualDebugTarget = true;
-	frameBuffer = Render_FrameBufferCreate(renderer, &fbDesc);
-
-	return true;
+	Render_FrameBufferResize(frameBuffer, windowDesc.width, windowDesc.height);
 }
 
 static void Update(double deltaMS) {
 	GameAppShell_WindowDesc windowDesc;
 	GameAppShell_WindowGetCurrentDesc(&windowDesc);
 
-	InputBasic_SetWindowSize(input, windowDesc.width, windowDesc.height);
 	InputBasic_Update(input, deltaMS);
 	if (InputBasic_GetAsBool(input, AppKey_Quit)) {
 		GameAppShell_Quit();
