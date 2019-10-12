@@ -17,13 +17,17 @@
 
 #include "al2o3_os/filesystem.h"
 
+#include "synthwaveviztests.h"
+
 extern void VisualDebugTests();
 
 SimpleLogManager_Handle g_logger;
 int g_returnCode;
 
 bool bDoVisualDebugTests = false;
+
 bool bDoSynthWaveVizTests = false;
+SynthWaveVizTestsHandle synthWaveVizTests;
 
 Render_RendererHandle renderer;
 Render_FrameBufferHandle frameBuffer;
@@ -118,6 +122,7 @@ static bool Init() {
 		InputBasic_MapToKey(input, AppKey_Quit, keyboard, InputBasic_Key_Escape);
 		InputBasic_MapToKey(input, AppKey_GPUCapture, keyboard, InputBasic_Key_Tab);
 	}
+	InputBasic_SetWindowSize(input, windowDesc.width, windowDesc.height);
 
 	Render_FrameBufferDesc fbDesc{};
 	fbDesc.platformHandle = GameAppShell_GetPlatformWindowPtr();
@@ -126,7 +131,6 @@ static bool Init() {
 	fbDesc.frameBufferWidth = windowDesc.width;
 	fbDesc.frameBufferHeight = windowDesc.height;
 	fbDesc.colourFormat = TinyImageFormat_UNDEFINED;
-	fbDesc.depthFormat = TinyImageFormat_UNDEFINED;
 	fbDesc.embeddedImgui = true;
 	fbDesc.visualDebugTarget = true;
 	frameBuffer = Render_FrameBufferCreate(renderer, &fbDesc);
@@ -139,6 +143,10 @@ static void Resize() {
 	GameAppShell_WindowGetCurrentDesc(&windowDesc);
 
 	Render_FrameBufferResize(frameBuffer, windowDesc.width, windowDesc.height);
+	InputBasic_SetWindowSize(input, windowDesc.width, windowDesc.height);
+	if(synthWaveVizTests) {
+		SynthWaveVizTests_Resize(synthWaveVizTests, windowDesc.width, windowDesc.height);
+	}
 }
 
 static void Update(double deltaMS) {
@@ -146,6 +154,10 @@ static void Update(double deltaMS) {
 	GameAppShell_WindowGetCurrentDesc(&windowDesc);
 
 	InputBasic_Update(input, deltaMS);
+	Render_FrameBufferUpdate(frameBuffer,
+													 windowDesc.width, windowDesc.height,
+													 deltaMS);
+
 	if (InputBasic_GetAsBool(input, AppKey_Quit)) {
 		GameAppShell_Quit();
 	}
@@ -157,9 +169,26 @@ static void Update(double deltaMS) {
 		VisualDebugTests();
 	}
 
-	Render_FrameBufferUpdate(frameBuffer,
-													 windowDesc.width, windowDesc.height,
-													 deltaMS);
+	if(bDoSynthWaveVizTests) {
+		if(!synthWaveVizTests) {
+			synthWaveVizTests = SynthWaveVizTests_Create(renderer, windowDesc.width, windowDesc.height);
+			if(!synthWaveVizTests) {
+				LOGERROR("SynthWaveVizTests_Create failed");
+				bDoSynthWaveVizTests = false;
+			}
+		}
+
+		if(synthWaveVizTests) {
+			SynthWaveVizTests_Update(synthWaveVizTests, deltaMS);
+		}
+	} else {
+		if(synthWaveVizTests) {
+			SynthWaveVizTests_Destroy(synthWaveVizTests);
+			synthWaveVizTests = nullptr;
+		}
+	}
+
+
 	Render_View view{
 			{0, 0, -9},
 			{0, 0, 0},
@@ -191,6 +220,12 @@ static void Draw(double deltaMS) {
 
 	Render_FrameBufferNewFrame(frameBuffer);
 
+	auto graphicsEncoder = Render_FrameBufferGraphicsEncoder(frameBuffer);
+
+	if(bDoSynthWaveVizTests && synthWaveVizTests) {
+		SynthWaveVizTests_Render(synthWaveVizTests, graphicsEncoder);
+	}
+
 	Render_FrameBufferPresent(frameBuffer);
 
 	if(gpuCaptureState == GpuCaptureState::Capturing) {
@@ -202,6 +237,11 @@ static void Draw(double deltaMS) {
 
 static void Exit() {
 	LOGINFO("Exiting");
+
+	if(synthWaveVizTests) {
+		SynthWaveVizTests_Destroy(synthWaveVizTests);
+		synthWaveVizTests = nullptr;
+	}
 
 	Render_FrameBufferDestroy(renderer, frameBuffer);
 

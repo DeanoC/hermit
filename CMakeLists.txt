@@ -21,7 +21,7 @@ project(${ProjectName})
 set(Src
 		main.cpp
 		visualdebugtests.cpp
-		synthwavvizetests.cpp
+		synthwaveviztests.c
 		)
 if(APPLE)
 	list( APPEND Src Info.plist.in entitlements.plist)
@@ -41,7 +41,7 @@ set(Deps
 		render_basics_impl_theforge
 		render_meshmod
 		render_meshmodio
-		render_meshmodplatonicsolids
+#		render_meshmodplatonicsolids
 		input_basic_interface
 		input_basic_impl_gainput
 		gfx_imgui
