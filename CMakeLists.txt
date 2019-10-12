@@ -39,6 +39,8 @@ set(Deps
 		utils_gameappshell_impl_basic
 		render_basics_interface
 		render_basics_impl_theforge
+		render_meshmod
+		render_meshmodio
 		input_basic_interface
 		input_basic_impl_gainput
 		gfx_imgui

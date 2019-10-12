@@ -4,6 +4,7 @@
     <mapping directory="$PROJECT_DIR$/../al2o3/al2o3_cadt-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/al2o3_cmath-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/al2o3_enki-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../al2o3/al2o3_lz4-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/al2o3_memory-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/al2o3_os-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/al2o3_platform-src" vcs="Git" />
@@ -27,6 +28,8 @@
     <mapping directory="$PROJECT_DIR$/../al2o3/input_gainput-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/render_basics_impl_theforge-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/render_basics_interface-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../al2o3/render_meshmod-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../al2o3/render_meshmodio-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/tiny_dds-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/tiny_imageformat-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/tiny_ktx-src" vcs="Git" />
