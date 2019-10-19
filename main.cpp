@@ -127,7 +127,6 @@ static bool Init() {
 	Render_FrameBufferDesc fbDesc{};
 	fbDesc.platformHandle = GameAppShell_GetPlatformWindowPtr();
 	fbDesc.queue = Render_RendererGetPrimaryQueue(renderer, Render_QT_GRAPHICS);
-	fbDesc.commandPool = Render_RendererGetPrimaryCommandPool(renderer, Render_QT_GRAPHICS);
 	fbDesc.frameBufferWidth = windowDesc.width;
 	fbDesc.frameBufferHeight = windowDesc.height;
 	fbDesc.colourFormat = TinyImageFormat_UNDEFINED;

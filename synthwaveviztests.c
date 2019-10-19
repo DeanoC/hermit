@@ -100,9 +100,5 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Render(SynthWaveVizTestsHandle ctx, Render
 }
 
 AL2O3_EXTERN_C Render_TextureHandle SynthWaveVizTests_ColourTarget(SynthWaveVizTestsHandle ctx) {
-	if(!ctx) {
-		return NULL;
-	}
-
 	return ctx->colourTargetTexture;
 }

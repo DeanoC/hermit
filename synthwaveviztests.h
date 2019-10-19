@@ -2,7 +2,6 @@
 
 // forward decl
 typedef struct Render_Renderer * Render_RendererHandle;
-typedef struct Render_GraphicsEncoder * Render_GraphicsEncoderHandle;
 
 
 typedef struct SynthWaveVizTests *SynthWaveVizTestsHandle;
