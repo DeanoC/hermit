@@ -1,5 +1,7 @@
 #pragma once
 
+#include "render_basics/api.h"
+
 // forward decl
 typedef struct Render_Renderer * Render_RendererHandle;
 
