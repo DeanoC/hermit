@@ -223,6 +223,7 @@ static void Draw(double deltaMS) {
 
 	if(bDoSynthWaveVizTests && synthWaveVizTests) {
 		SynthWaveVizTests_Render(synthWaveVizTests, graphicsEncoder);
+		SynthWaveVizTests_Composite(synthWaveVizTests, graphicsEncoder, Render_FrameBufferColourTarget(frameBuffer));
 	}
 
 	Render_FrameBufferPresent(frameBuffer);
@@ -237,12 +238,13 @@ static void Draw(double deltaMS) {
 static void Exit() {
 	LOGINFO("Exiting");
 
+	// framebuffer destroy will stall to all pipes are empty
+	Render_FrameBufferDestroy(renderer, frameBuffer);
+
 	if(synthWaveVizTests) {
 		SynthWaveVizTests_Destroy(synthWaveVizTests);
 		synthWaveVizTests = nullptr;
 	}
-
-	Render_FrameBufferDestroy(renderer, frameBuffer);
 
 	InputBasic_MouseDestroy(mouse);
 	InputBasic_KeyboardDestroy(keyboard);

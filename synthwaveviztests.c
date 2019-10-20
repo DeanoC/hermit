@@ -6,7 +6,8 @@
 #include "render_basics/texture.h"
 #include "render_basics/shader.h"
 #include "render_basics/graphicsencoder.h"
-
+#include "render_basics/rootsignature.h"
+#include "render_basics/pipeline.h"
 #include "synthwaveviztests.h"
 
 
@@ -16,6 +17,9 @@ typedef struct SynthWaveVizTests {
 	Render_TextureHandle colourTargetTexture;
 	Render_TextureHandle depthTargetTexture;
 
+	TinyImageFormat currentDestFormat;
+	Render_RootSignatureHandle compositeRootSignature;
+	Render_PipelineHandle compositePipeline;
 	Render_ShaderHandle compositeShader;
 
 
@@ -67,17 +71,30 @@ static bool CreateShaders(SynthWaveVizTests *vd) {
 }
 
 AL2O3_EXTERN_C SynthWaveVizTestsHandle SynthWaveVizTests_Create(Render_RendererHandle renderer, uint32_t width, uint32_t height) {
-	SynthWaveVizTests* mem = (SynthWaveVizTests*) MEMORY_CALLOC(0, sizeof(SynthWaveVizTests));
-	mem->renderer = renderer;
+	SynthWaveVizTests* svt = (SynthWaveVizTests*) MEMORY_CALLOC(1, sizeof(SynthWaveVizTests));
+	svt->renderer = renderer;
 
-	if(CreateShaders(mem) == false) {
-		MEMORY_FREE(mem);
+	if(CreateShaders(svt) == false) {
+		MEMORY_FREE(svt);
 		return NULL;
 	}
 
-	SynthWaveVizTests_Resize(mem, width, height);
+	SynthWaveVizTests_Resize(svt, width, height);
 
-	return mem;
+	Render_RootSignatureDesc rootSignatureDesc = {
+			.shaderCount = 1,
+			.shaders = { &svt->compositeShader },
+			.staticSamplerCount = 0,
+	};
+
+	svt->compositeRootSignature = Render_RootSignatureCreate(renderer, &rootSignatureDesc);
+	if (!Render_RootSignatureHandleIsValid(svt->compositeRootSignature)) {
+		SynthWaveVizTests_Destroy(svt);
+		return NULL;
+	}
+
+
+	return svt;
 }
 
 AL2O3_EXTERN_C void SynthWaveVizTests_Resize(SynthWaveVizTestsHandle ctx, uint32_t width, uint32_t height) {
@@ -117,6 +134,11 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Resize(SynthWaveVizTestsHandle ctx, uint32
 }
 
 AL2O3_EXTERN_C void SynthWaveVizTests_Destroy(SynthWaveVizTestsHandle ctx) {
+
+	Render_PipelineDestroy(ctx->renderer, ctx->compositePipeline);
+	Render_RootSignatureDestroy(ctx->renderer, ctx->compositeRootSignature);
+
+	Render_ShaderDestroy(ctx->renderer, ctx->compositeShader);
 
 	Render_TextureDestroy(ctx->renderer, ctx->depthTargetTexture);
 	Render_TextureDestroy(ctx->renderer, ctx->colourTargetTexture);
@@ -165,5 +187,38 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Composite(SynthWaveVizTestsHandle ctx,
 																					false,
 																					true,
 																					true);
+
+	TinyImageFormat destFormat = Render_TextureGetFormat(dest);
+	if(destFormat != ctx->currentDestFormat) {
+		if (	Render_PipelineHandleIsValid(ctx->compositePipeline)) {
+			Render_PipelineHandleRelease(ctx->compositePipeline);
+		}
+
+		TinyImageFormat colourFormats[] = { destFormat };
+
+		Render_GraphicsPipelineDesc compositeGfxPipeDesc = {
+				.shader = ctx->compositeShader,
+				.rootSignature = ctx->compositeRootSignature,
+				.vertexLayout = Render_GetStockVertexLayout(ctx->renderer, Render_SVL_3D_COLOUR),
+				.blendState = Render_GetStockBlendState(ctx->renderer, Render_SBS_PM_PORTER_DUFF),
+				.depthState = Render_GetStockDepthState(ctx->renderer, Render_SDS_IGNORE),
+				.rasteriserState = Render_GetStockRasterisationState(ctx->renderer, Render_SRS_NOCULL),
+				.colourRenderTargetCount = 1,
+				.colourFormats = colourFormats,
+				.depthStencilFormat = TinyImageFormat_UNDEFINED,
+				.sampleCount = 1,
+				.sampleQuality = 0,
+				.primitiveTopo = Render_PT_TRI_LIST
+		};
+
+		ctx->compositePipeline = Render_GraphicsPipelineCreate(ctx->renderer, &compositeGfxPipeDesc);
+		if (!Render_PipelineHandleIsValid(ctx->compositePipeline)) {
+			return;
+		}
+		ctx->currentDestFormat = destFormat;
+	}
+
+	Render_GraphicsEncoderBindPipeline(encoder, ctx->compositePipeline);
+	Render_GraphicsEncoderDraw(encoder, 6, 0);
 
 }

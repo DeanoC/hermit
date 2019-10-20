@@ -14,5 +14,5 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Resize(SynthWaveVizTestsHandle ctx, uint32
 
 AL2O3_EXTERN_C void SynthWaveVizTests_Update(SynthWaveVizTestsHandle ctx, double deltaMS);
 AL2O3_EXTERN_C void SynthWaveVizTests_Render(SynthWaveVizTestsHandle ctx, Render_GraphicsEncoderHandle encoder);
-
+AL2O3_EXTERN_C void SynthWaveVizTests_Composite(SynthWaveVizTestsHandle ctx, Render_GraphicsEncoderHandle encoder, Render_TextureHandle dest);
 AL2O3_EXTERN_C Render_TextureHandle SynthWaveVizTests_ColourTarget(SynthWaveVizTestsHandle ctx);
