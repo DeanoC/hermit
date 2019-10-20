@@ -8,8 +8,8 @@
 #include "render_basics/graphicsencoder.h"
 #include "render_basics/rootsignature.h"
 #include "render_basics/pipeline.h"
+#include "render_basics/descriptorset.h"
 #include "synthwaveviztests.h"
-
 
 typedef struct SynthWaveVizTests {
 
@@ -19,50 +19,52 @@ typedef struct SynthWaveVizTests {
 
 	TinyImageFormat currentDestFormat;
 	Render_RootSignatureHandle compositeRootSignature;
+	Render_DescriptorSetHandle compositeDescriptorSet;
 	Render_PipelineHandle compositePipeline;
 	Render_ShaderHandle compositeShader;
-
 
 } SynthWaveVizTests;
 
 static bool CreateShaders(SynthWaveVizTests *vd) {
-	static char const *const VertexShader = "struct VSOutput {\n"
-																					"\tfloat4 Position 	: SV_Position;\n"
-																					"\tfloat2 UV   			: TexCoord0;\n"
-																					"};\n"
-																					"\n"
-																					"VSOutput VS_main(in uint vertexId : SV_VertexID)\n"
-																					"{\n"
-																					"    VSOutput result;\n"
-																					"\n"
-																					"\tresult.UV = float2(uint2(vertexId, vertexId << 1) & 2);\n"
-																					"\tresult.Position = float4(lerp(float2(-1,1), float2(1, -1), result.UV), 0, 1);\n"
-																					"\treturn result;\n"
-																					"}";
+	static char const *const CompositeVertexShader = "struct VSOutput {\n"
+																									 "\tfloat4 Position 	: SV_Position;\n"
+																									 "\tfloat2 UV   			: TexCoord0;\n"
+																									 "};\n"
+																									 "\n"
+																									 "VSOutput VS_main(in uint vertexId : SV_VertexID)\n"
+																									 "{\n"
+																									 "    VSOutput result;\n"
+																									 "\n"
+																									 "\tresult.UV = float2(uint2(vertexId, vertexId << 1) & 2);\n"
+																									 "\tresult.Position = float4(lerp(float2(-1,1), float2(1, -1), result.UV), 0, 1);\n"
+																									 "\treturn result;\n"
+																									 "}";
 
-	static char const *const FragmentShader = "struct FSInput {\n"
-																						"\tfloat4 Position 	: SV_Position;\n"
-																						"\tfloat2 UV   			: TexCoord0;\n"
-																						"};\n"
-																						"\n"
-																						"float4 FS_main(FSInput input) : SV_Target\n"
-																						"{\n"
-																						"\treturn float4(input.UV,0,1);\n"
-																						"}\n";
+	static char const *const CompositeFragmentShader = "struct FSInput {\n"
+																										 "\tfloat4 Position 	: SV_Position;\n"
+																										 "\tfloat2 UV   			: TexCoord0;\n"
+																										 "};\n"
+																										 "\n"
+																										 "Texture2D colourTexture : register(t0, space0);\n"
+																										 "SamplerState bilinearSampler : register(s0, space0);\n"
+																										 "float4 FS_main(FSInput input) : SV_Target\n"
+																										 "{\n"
+																										 "\treturn colourTexture.Sample(bilinearSampler, input.UV);\n"
+																										 "}\n";
 
 	static char const *const vertEntryPoint = "VS_main";
 	static char const *const fragEntryPoint = "FS_main";
 
-	VFile_Handle vfile = VFile_FromMemory(VertexShader, strlen(VertexShader) + 1, false);
+	VFile_Handle vfile = VFile_FromMemory(CompositeVertexShader, strlen(CompositeVertexShader) + 1, false);
 	if (!vfile) {
 		return false;
 	}
-	VFile_Handle ffile = VFile_FromMemory(FragmentShader, strlen(FragmentShader) + 1, false);
+	VFile_Handle ffile = VFile_FromMemory(CompositeFragmentShader, strlen(CompositeFragmentShader) + 1, false);
 	if (!ffile) {
 		VFile_Close(vfile);
 		return false;
 	}
-	vd->compositeShader = Render_CreateShaderFromVFile(vd->renderer, vfile, "VS_main", ffile,"FS_main");
+	vd->compositeShader = Render_CreateShaderFromVFile(vd->renderer, vfile, "VS_main", ffile, "FS_main");
 
 	VFile_Close(vfile);
 	VFile_Close(ffile);
@@ -70,21 +72,27 @@ static bool CreateShaders(SynthWaveVizTests *vd) {
 	return Render_ShaderHandleIsValid(vd->compositeShader);
 }
 
-AL2O3_EXTERN_C SynthWaveVizTestsHandle SynthWaveVizTests_Create(Render_RendererHandle renderer, uint32_t width, uint32_t height) {
-	SynthWaveVizTests* svt = (SynthWaveVizTests*) MEMORY_CALLOC(1, sizeof(SynthWaveVizTests));
+AL2O3_EXTERN_C SynthWaveVizTestsHandle SynthWaveVizTests_Create(Render_RendererHandle renderer,
+																																uint32_t width,
+																																uint32_t height) {
+	SynthWaveVizTests *svt = (SynthWaveVizTests *) MEMORY_CALLOC(1, sizeof(SynthWaveVizTests));
 	svt->renderer = renderer;
 
-	if(CreateShaders(svt) == false) {
+	if (CreateShaders(svt) == false) {
 		MEMORY_FREE(svt);
 		return NULL;
 	}
 
 	SynthWaveVizTests_Resize(svt, width, height);
 
-	Render_RootSignatureDesc rootSignatureDesc = {
+	Render_SamplerHandle linearSampler = Render_GetStockSampler(renderer, Render_SST_LINEAR);
+	char const * linearSamplerName = "bilinearSampler";
+	Render_RootSignatureDesc const rootSignatureDesc = {
 			.shaderCount = 1,
-			.shaders = { &svt->compositeShader },
-			.staticSamplerCount = 0,
+			.shaders = &svt->compositeShader,
+			.staticSamplerCount = 1,
+			.staticSamplerNames = &linearSamplerName,
+			.staticSamplers = &linearSampler
 	};
 
 	svt->compositeRootSignature = Render_RootSignatureCreate(renderer, &rootSignatureDesc);
@@ -92,7 +100,18 @@ AL2O3_EXTERN_C SynthWaveVizTestsHandle SynthWaveVizTests_Create(Render_RendererH
 		SynthWaveVizTests_Destroy(svt);
 		return NULL;
 	}
-
+	Render_DescriptorSetDesc const compositeDSdesc = {
+			.rootSignature = svt->compositeRootSignature,
+			.updateFrequency = Render_DUF_NEVER,
+			1
+	};
+	svt->compositeDescriptorSet = Render_DescriptorSetCreate(renderer, &compositeDSdesc);
+	Render_DescriptorDesc const compositeSourceTexturedesc = {
+			.name = "colourTexture",
+			.type = Render_DT_TEXTURE,
+			.texture = svt->colourTargetTexture,
+	};
+	Render_DescriptorUpdate(svt->compositeDescriptorSet, 0, 1, &compositeSourceTexturedesc);
 
 	return svt;
 }
@@ -111,7 +130,7 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Resize(SynthWaveVizTestsHandle ctx, uint32
 			.sampleQuality = 1,
 			.initialData = NULL,
 			.debugName = "SynthWaveColourTarget",
-			.renderTargetClearValue = { 1, 1, 0, 0}
+			.renderTargetClearValue = {1, 1, 0, 1}
 	};
 
 	ctx->colourTargetTexture = Render_TextureSyncCreate(ctx->renderer, &colourTargetDesc);
@@ -127,7 +146,7 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Resize(SynthWaveVizTestsHandle ctx, uint32
 			.sampleQuality = 1,
 			.initialData = NULL,
 			.debugName = "SynthWaveDepthTarget",
-			.renderTargetClearValue = { .depth = 1.0f }
+			.renderTargetClearValue = {.depth = 1.0f}
 	};
 	ctx->depthTargetTexture = Render_TextureSyncCreate(ctx->renderer, &depthTargetDesc);
 
@@ -135,9 +154,9 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Resize(SynthWaveVizTestsHandle ctx, uint32
 
 AL2O3_EXTERN_C void SynthWaveVizTests_Destroy(SynthWaveVizTestsHandle ctx) {
 
+	Render_DescriptorSetDestroy(ctx->renderer, ctx->compositeDescriptorSet);
 	Render_PipelineDestroy(ctx->renderer, ctx->compositePipeline);
 	Render_RootSignatureDestroy(ctx->renderer, ctx->compositeRootSignature);
-
 	Render_ShaderDestroy(ctx->renderer, ctx->compositeShader);
 
 	Render_TextureDestroy(ctx->renderer, ctx->depthTargetTexture);
@@ -154,9 +173,9 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Render(SynthWaveVizTestsHandle ctx, Render
 
 	// no need to transition the depth texture at the moment...
 
-	Render_TextureHandle renderTargets[] = { ctx->colourTargetTexture, ctx->depthTargetTexture };
-	Render_TextureTransitionType const targetTransitions[] = { Render_TTT_RENDER_TARGET};
-	Render_TextureTransitionType const textureTransitions[] = { RENDER_TTT_SHADER_ACCESS};
+	Render_TextureHandle renderTargets[] = {ctx->colourTargetTexture, ctx->depthTargetTexture};
+	Render_TextureTransitionType const targetTransitions[] = {Render_TTT_RENDER_TARGET};
+	Render_TextureTransitionType const textureTransitions[] = {RENDER_TTT_SHADER_ACCESS};
 
 	Render_GraphicsEncoderTransition(encoder, 0, NULL, NULL,
 																	 1, renderTargets, targetTransitions);
@@ -173,14 +192,14 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Render(SynthWaveVizTestsHandle ctx, Render
 
 	// transition after use
 	Render_GraphicsEncoderBindRenderTargets(encoder, 0, NULL, false, false, false);
-	Render_GraphicsEncoderTransition(encoder, 0, NULL, NULL,1, renderTargets, textureTransitions);
+	Render_GraphicsEncoderTransition(encoder, 0, NULL, NULL, 1, renderTargets, textureTransitions);
 
 }
 AL2O3_EXTERN_C void SynthWaveVizTests_Composite(SynthWaveVizTestsHandle ctx,
-		Render_GraphicsEncoderHandle encoder,
-		Render_TextureHandle dest ) {
+																								Render_GraphicsEncoderHandle encoder,
+																								Render_TextureHandle dest) {
 
-	Render_TextureHandle renderTargets[] = { dest };
+	Render_TextureHandle renderTargets[] = {dest};
 	Render_GraphicsEncoderBindRenderTargets(encoder,
 																					1,
 																					renderTargets,
@@ -189,17 +208,15 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Composite(SynthWaveVizTestsHandle ctx,
 																					true);
 
 	TinyImageFormat destFormat = Render_TextureGetFormat(dest);
-	if(destFormat != ctx->currentDestFormat) {
-		if (	Render_PipelineHandleIsValid(ctx->compositePipeline)) {
-			Render_PipelineHandleRelease(ctx->compositePipeline);
-		}
+	if (destFormat != ctx->currentDestFormat) {
+		Render_PipelineDestroy(ctx->renderer, ctx->compositePipeline);
 
-		TinyImageFormat colourFormats[] = { destFormat };
+		TinyImageFormat colourFormats[] = {destFormat};
 
 		Render_GraphicsPipelineDesc compositeGfxPipeDesc = {
 				.shader = ctx->compositeShader,
 				.rootSignature = ctx->compositeRootSignature,
-				.vertexLayout = Render_GetStockVertexLayout(ctx->renderer, Render_SVL_3D_COLOUR),
+				.vertexLayout = NULL,
 				.blendState = Render_GetStockBlendState(ctx->renderer, Render_SBS_PM_PORTER_DUFF),
 				.depthState = Render_GetStockDepthState(ctx->renderer, Render_SDS_IGNORE),
 				.rasteriserState = Render_GetStockRasterisationState(ctx->renderer, Render_SRS_NOCULL),
@@ -218,6 +235,7 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Composite(SynthWaveVizTestsHandle ctx,
 		ctx->currentDestFormat = destFormat;
 	}
 
+	Render_GraphicsEncoderBindDescriptorSet(encoder, ctx->compositeDescriptorSet, 0);
 	Render_GraphicsEncoderBindPipeline(encoder, ctx->compositePipeline);
 	Render_GraphicsEncoderDraw(encoder, 6, 0);
 
