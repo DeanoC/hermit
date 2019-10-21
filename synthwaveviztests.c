@@ -9,6 +9,8 @@
 #include "render_basics/rootsignature.h"
 #include "render_basics/pipeline.h"
 #include "render_basics/descriptorset.h"
+#include "tiny_imageformat/tinyimageformat_base.h"
+#include "tiny_imageformat/tinyimageformat_encode.h"
 #include "synthwaveviztests.h"
 
 typedef struct SynthWaveVizTests {
@@ -23,9 +25,14 @@ typedef struct SynthWaveVizTests {
 	Render_PipelineHandle compositePipeline;
 	Render_ShaderHandle compositeShader;
 
+	Render_TextureHandle skyGradientTexture;
+	Render_ShaderHandle skyGradientShader;
+	Render_RootSignatureHandle skyGradientRootSignature;
+	Render_DescriptorSetHandle skyGradientDescriptorSet;
+	Render_PipelineHandle skyGradientPipeline;
 } SynthWaveVizTests;
 
-static bool CreateShaders(SynthWaveVizTests *vd) {
+static bool CreateComposite(SynthWaveVizTests *svt) {
 	static char const *const CompositeVertexShader = "struct VSOutput {\n"
 																									 "\tfloat4 Position 	: SV_Position;\n"
 																									 "\tfloat2 UV   			: TexCoord0;\n"
@@ -51,41 +58,17 @@ static bool CreateShaders(SynthWaveVizTests *vd) {
 																										 "{\n"
 																										 "\treturn colourTexture.Sample(bilinearSampler, input.UV);\n"
 																										 "}\n";
+	VFile_Handle compositevfile = VFile_FromMemory(CompositeVertexShader, strlen(CompositeVertexShader) + 1, false);
+	VFile_Handle compositeffile = VFile_FromMemory(CompositeFragmentShader, strlen(CompositeFragmentShader) + 1, false);
+	svt->compositeShader = Render_CreateShaderFromVFile(svt->renderer, compositevfile, "VS_main", compositeffile, "FS_main");
+	VFile_Close(compositevfile);
+	VFile_Close(compositeffile);
 
-	static char const *const vertEntryPoint = "VS_main";
-	static char const *const fragEntryPoint = "FS_main";
-
-	VFile_Handle vfile = VFile_FromMemory(CompositeVertexShader, strlen(CompositeVertexShader) + 1, false);
-	if (!vfile) {
+	if(!Render_ShaderHandleIsValid(svt->compositeShader)) {
 		return false;
 	}
-	VFile_Handle ffile = VFile_FromMemory(CompositeFragmentShader, strlen(CompositeFragmentShader) + 1, false);
-	if (!ffile) {
-		VFile_Close(vfile);
-		return false;
-	}
-	vd->compositeShader = Render_CreateShaderFromVFile(vd->renderer, vfile, "VS_main", ffile, "FS_main");
 
-	VFile_Close(vfile);
-	VFile_Close(ffile);
-
-	return Render_ShaderHandleIsValid(vd->compositeShader);
-}
-
-AL2O3_EXTERN_C SynthWaveVizTestsHandle SynthWaveVizTests_Create(Render_RendererHandle renderer,
-																																uint32_t width,
-																																uint32_t height) {
-	SynthWaveVizTests *svt = (SynthWaveVizTests *) MEMORY_CALLOC(1, sizeof(SynthWaveVizTests));
-	svt->renderer = renderer;
-
-	if (CreateShaders(svt) == false) {
-		MEMORY_FREE(svt);
-		return NULL;
-	}
-
-	SynthWaveVizTests_Resize(svt, width, height);
-
-	Render_SamplerHandle linearSampler = Render_GetStockSampler(renderer, Render_SST_LINEAR);
+	Render_SamplerHandle linearSampler = Render_GetStockSampler(svt->renderer, Render_SST_LINEAR);
 	char const * linearSamplerName = "bilinearSampler";
 	Render_RootSignatureDesc const rootSignatureDesc = {
 			.shaderCount = 1,
@@ -95,23 +78,196 @@ AL2O3_EXTERN_C SynthWaveVizTestsHandle SynthWaveVizTests_Create(Render_RendererH
 			.staticSamplers = &linearSampler
 	};
 
-	svt->compositeRootSignature = Render_RootSignatureCreate(renderer, &rootSignatureDesc);
+	svt->compositeRootSignature = Render_RootSignatureCreate(svt->renderer, &rootSignatureDesc);
 	if (!Render_RootSignatureHandleIsValid(svt->compositeRootSignature)) {
-		SynthWaveVizTests_Destroy(svt);
-		return NULL;
+		return false;
 	}
 	Render_DescriptorSetDesc const compositeDSdesc = {
 			.rootSignature = svt->compositeRootSignature,
 			.updateFrequency = Render_DUF_NEVER,
 			1
 	};
-	svt->compositeDescriptorSet = Render_DescriptorSetCreate(renderer, &compositeDSdesc);
+	svt->compositeDescriptorSet = Render_DescriptorSetCreate(svt->renderer, &compositeDSdesc);
+	if (!Render_DescriptorSetHandleIsValid(svt->compositeDescriptorSet)) {
+		return false;
+	}
 	Render_DescriptorDesc const compositeSourceTexturedesc = {
 			.name = "colourTexture",
 			.type = Render_DT_TEXTURE,
 			.texture = svt->colourTargetTexture,
 	};
 	Render_DescriptorUpdate(svt->compositeDescriptorSet, 0, 1, &compositeSourceTexturedesc);
+
+	return true;
+}
+
+static bool CreateSkyGradient(SynthWaveVizTests *svt) {
+	static char const *const VertexShader = "struct VSOutput {\n"
+																					"\tfloat4 Position 	: SV_Position;\n"
+																					"\tfloat2 UV   			: TexCoord0;\n"
+																					"};\n"
+																					"\n"
+																					"VSOutput VS_main(in uint vertexId : SV_VertexID)\n"
+																					"{\n"
+																					"    VSOutput result;\n"
+																					"\n"
+																					"\tresult.UV = float2(uint2(vertexId, vertexId << 1) & 2);\n"
+																					"\tresult.Position = float4(lerp(float2(-1,1), float2(1, -1), result.UV), 0, 1);\n"
+																					"\treturn result;\n"
+																					"}";
+
+	static char const *const FragmentShader = "struct FSInput {\n"
+																						"\tfloat4 Position 	: SV_Position;\n"
+																						"\tfloat2 UV   			: TexCoord0;\n"
+																						"};\n"
+																						"\n"
+																						"Texture1D colourTexture : register(t0, space0);\n"
+																						"SamplerState bilinearSampler : register(s0, space0);\n"
+																						"float4 FS_main(FSInput input) : SV_Target\n"
+																						"{\n"
+																						"\tfloat4 sample = colourTexture.Sample(bilinearSampler, 1-input.UV.y);\n"
+																						"\treturn sample;\n"
+																						"}\n";
+	VFile_Handle vfile = VFile_FromMemory(VertexShader, strlen(VertexShader) + 1, false);
+	VFile_Handle ffile = VFile_FromMemory(FragmentShader, strlen(FragmentShader) + 1, false);
+	svt->skyGradientShader = Render_CreateShaderFromVFile(svt->renderer, vfile, "VS_main", ffile, "FS_main");
+	VFile_Close(vfile);
+	VFile_Close(ffile);
+
+	if(!Render_ShaderHandleIsValid(svt->compositeShader)){
+		return false;
+	}
+
+	// the main thing for the sky gradient is a 1D colour table
+	// this is looked up via NDC y (-1 to 1) mapped to 0 to 1
+	// start simple
+	// -1 to 0 = black
+	// 0 to 1 = purple to dark blue
+	// TinyImageFormat_R10G10B10A2_UNORM to match background
+	// 256 samples
+	uint32_t output[256];
+	TinyImageFormat_EncodeOutput encoded = {
+			.pixel = output
+	};
+
+	float colourTable[4 * 256];
+
+	// -1 to 0
+	for(uint32_t i = 0;i < 128;++i) {
+		colourTable[i*4+0] = 0;
+		colourTable[i*4+1] = 0;
+		colourTable[i*4+2] = 0;
+		colourTable[i*4+3] = 1;
+	}
+	for(uint32_t i = 128;i < 129;++i) {
+		colourTable[i*4+0] = 1;
+		colourTable[i*4+1] = 1;
+		colourTable[i*4+2] = 1;
+		colourTable[i*4+3] = 1;
+	}
+	// 0 to 1
+	for(uint32_t i = 129;i < 256;++i) {
+		colourTable[i*4+0] = 1-(((float)i-129.0f)/128.0f);
+		colourTable[i*4+1] = 0.05f;
+		colourTable[i*4+2] = 0.4f;
+		colourTable[i*4+3] = 1;
+	}
+
+	bool encodeOkay = TinyImageFormat_EncodeLogicalPixelsF(TinyImageFormat_R10G10B10A2_UNORM, colourTable, 256, &encoded);
+	if(!encodeOkay) {
+		return false;
+	}
+
+	Render_TextureCreateDesc const createDesc = {
+		.format = TinyImageFormat_R10G10B10A2_UNORM,
+		.usageflags = Render_TUF_SHADER_READ,
+		.width = 256,
+		.height = 1,
+		.depth = 1,
+		.slices = 1,
+		.mipLevels = 1,
+		.sampleCount = 0,
+		.sampleQuality = 0,
+		.initialData = output,
+		.debugName = "SynthWave sky gradient"
+	};
+	svt->skyGradientTexture = Render_TextureSyncCreate(svt->renderer, &createDesc);
+	if(!Render_TextureHandleIsValid(svt->skyGradientTexture)) {
+		return false;
+	}
+
+	Render_SamplerHandle linearSampler = Render_GetStockSampler(svt->renderer, Render_SST_LINEAR);
+	char const * linearSamplerName = "bilinearSampler";
+	Render_RootSignatureDesc const rootSignatureDesc = {
+			.shaderCount = 1,
+			.shaders = &svt->skyGradientShader,
+			.staticSamplerCount = 1,
+			.staticSamplerNames = &linearSamplerName,
+			.staticSamplers = &linearSampler
+	};
+
+	svt->skyGradientRootSignature = Render_RootSignatureCreate(svt->renderer, &rootSignatureDesc);
+	if (!Render_RootSignatureHandleIsValid(svt->skyGradientRootSignature)) {
+		return false;
+	}
+	Render_DescriptorSetDesc const skyGradientDSdesc = {
+			.rootSignature = svt->skyGradientRootSignature,
+			.updateFrequency = Render_DUF_NEVER,
+			1
+	};
+	svt->skyGradientDescriptorSet = Render_DescriptorSetCreate(svt->renderer, &skyGradientDSdesc);
+	if (!Render_DescriptorSetHandleIsValid(svt->skyGradientDescriptorSet)) {
+		return false;
+	}
+	Render_DescriptorDesc const skyGradientSourceTexturedesc = {
+			.name = "colourTexture",
+			.type = Render_DT_TEXTURE,
+			.texture = svt->skyGradientTexture,
+	};
+	Render_DescriptorUpdate(svt->skyGradientDescriptorSet, 0, 1, &skyGradientSourceTexturedesc);
+
+	TinyImageFormat colourFormats[] = {TinyImageFormat_R10G10B10A2_UNORM};
+
+	Render_GraphicsPipelineDesc skyGradientGfxPipeDesc = {
+			.shader = svt->skyGradientShader,
+			.rootSignature = svt->skyGradientRootSignature,
+			.vertexLayout = NULL,
+			.blendState = Render_GetStockBlendState(svt->renderer, Render_SBS_OPAQUE),
+			.depthState = Render_GetStockDepthState(svt->renderer, Render_SDS_IGNORE),
+			.rasteriserState = Render_GetStockRasterisationState(svt->renderer, Render_SRS_NOCULL),
+			.colourRenderTargetCount = 1,
+			.colourFormats = colourFormats,
+			.depthStencilFormat = TinyImageFormat_UNDEFINED,
+			.sampleCount = 1,
+			.sampleQuality = 0,
+			.primitiveTopo = Render_PT_TRI_LIST
+	};
+
+	svt->skyGradientPipeline = Render_GraphicsPipelineCreate(svt->renderer, &skyGradientGfxPipeDesc);
+	if (!Render_PipelineHandleIsValid(svt->skyGradientPipeline)) {
+		return false;
+	}
+
+	return true;
+}
+
+AL2O3_EXTERN_C SynthWaveVizTestsHandle SynthWaveVizTests_Create(Render_RendererHandle renderer,
+																																uint32_t width,
+																																uint32_t height) {
+	SynthWaveVizTests *svt = (SynthWaveVizTests *) MEMORY_CALLOC(1, sizeof(SynthWaveVizTests));
+	svt->renderer = renderer;
+
+	SynthWaveVizTests_Resize(svt, width, height);
+
+	if (CreateComposite(svt) == false) {
+		SynthWaveVizTests_Destroy(svt);
+		return NULL;
+	}
+
+	if( CreateSkyGradient(svt) == false) {
+		SynthWaveVizTests_Destroy(svt);
+		return NULL;
+	}
 
 	return svt;
 }
@@ -120,7 +276,7 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Resize(SynthWaveVizTestsHandle ctx, uint32
 	Render_TextureDestroy(ctx->renderer, ctx->colourTargetTexture);
 
 	Render_TextureCreateDesc colourTargetDesc = {
-			.format =TinyImageFormat_R10G10B10A2_UNORM,
+			.format = TinyImageFormat_R10G10B10A2_UNORM,
 			.usageflags = (Render_TextureUsageFlags) (Render_TUF_SHADER_READ | Render_TUF_ROP_WRITE | Render_TUF_ROP_READ),
 			.width = width,
 			.height = height,
@@ -130,7 +286,7 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Resize(SynthWaveVizTestsHandle ctx, uint32
 			.sampleQuality = 1,
 			.initialData = NULL,
 			.debugName = "SynthWaveColourTarget",
-			.renderTargetClearValue = {1, 1, 0, 1}
+			.renderTargetClearValue = {0, 0, 0, 1}
 	};
 
 	ctx->colourTargetTexture = Render_TextureSyncCreate(ctx->renderer, &colourTargetDesc);
@@ -153,6 +309,12 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Resize(SynthWaveVizTestsHandle ctx, uint32
 }
 
 AL2O3_EXTERN_C void SynthWaveVizTests_Destroy(SynthWaveVizTestsHandle ctx) {
+
+	Render_DescriptorSetDestroy(ctx->renderer, ctx->skyGradientDescriptorSet);
+	Render_PipelineDestroy(ctx->renderer, ctx->skyGradientPipeline);
+	Render_RootSignatureDestroy(ctx->renderer, ctx->skyGradientRootSignature);
+	Render_ShaderDestroy(ctx->renderer, ctx->skyGradientShader);
+	Render_TextureDestroy(ctx->renderer, ctx->skyGradientTexture);
 
 	Render_DescriptorSetDestroy(ctx->renderer, ctx->compositeDescriptorSet);
 	Render_PipelineDestroy(ctx->renderer, ctx->compositePipeline);
@@ -188,6 +350,9 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Render(SynthWaveVizTestsHandle ctx, Render
 																					true);
 	// target bound and ready to go
 
+	Render_GraphicsEncoderBindDescriptorSet(encoder, ctx->skyGradientDescriptorSet, 0);
+	Render_GraphicsEncoderBindPipeline(encoder, ctx->skyGradientPipeline);
+	Render_GraphicsEncoderDraw(encoder, 3, 0);
 
 
 	// transition after use
@@ -237,6 +402,6 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Composite(SynthWaveVizTestsHandle ctx,
 
 	Render_GraphicsEncoderBindDescriptorSet(encoder, ctx->compositeDescriptorSet, 0);
 	Render_GraphicsEncoderBindPipeline(encoder, ctx->compositePipeline);
-	Render_GraphicsEncoderDraw(encoder, 6, 0);
+	Render_GraphicsEncoderDraw(encoder, 3, 0);
 
 }
