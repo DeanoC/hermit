@@ -46,5 +46,6 @@ set(Deps
 		input_basic_impl_gainput
 		gfx_imgui
 		gfx_theforge
+		tiny_imageformat
 		)
 ADD_GUI_APP( ${ProjectName} "${Src}" "${Deps}")
