@@ -141,39 +141,55 @@ static bool CreateSkyGradient(SynthWaveVizTests *svt) {
 	// the main thing for the sky gradient is a 1D colour table
 	// this is looked up via NDC y (-1 to 1) mapped to 0 to 1
 	// start simple
-	// -1 to 0 = black
+	// -1 to 0 = black with green lines
 	// 0 to 1 = purple to dark blue
 	// TinyImageFormat_R10G10B10A2_UNORM to match background
-	// 256 samples
-	uint32_t output[256];
+	// LookUpTableSize samples
+
+	static int const LookUpTableSize = 1024;
+	uint32_t output[LookUpTableSize];
 	TinyImageFormat_EncodeOutput encoded = {
 			.pixel = output
 	};
 
-	float colourTable[4 * 256];
+	float colourTable[4 * LookUpTableSize];
 
 	// -1 to 0
-	for(uint32_t i = 0;i < 128;++i) {
-		colourTable[i*4+0] = 0;
-		colourTable[i*4+1] = 0;
-		colourTable[i*4+2] = 0;
-		colourTable[i*4+3] = 1;
+	int greenCheck = ((LookUpTableSize/2) * (256/4)) + (90 * 256);
+	int greenIncrement = (LookUpTableSize/2) * (256/2);
+	int accum = 0;
+	for(uint32_t i = 0;i < LookUpTableSize/2;++i) {
+		if(accum >= greenCheck) {
+			colourTable[i * 4 + 0] = 0;
+			colourTable[i * 4 + 1] = 1;
+			colourTable[i * 4 + 2] = 0;
+			colourTable[i * 4 + 3] = 1;
+			greenIncrement = (greenIncrement * 130) >> 8;
+			greenCheck += greenIncrement;
+		} else {
+			colourTable[i * 4 + 0] = 0;
+			colourTable[i * 4 + 1] = 0;
+			colourTable[i * 4 + 2] = 0;
+			colourTable[i * 4 + 3] = 1;
+			accum += 256;
+		}
 	}
-	for(uint32_t i = 128;i < 129;++i) {
+	for(uint32_t i = LookUpTableSize/2;i < (LookUpTableSize/2)+1;++i) {
 		colourTable[i*4+0] = 1;
 		colourTable[i*4+1] = 1;
 		colourTable[i*4+2] = 1;
 		colourTable[i*4+3] = 1;
 	}
 	// 0 to 1
-	for(uint32_t i = 129;i < 256;++i) {
-		colourTable[i*4+0] = 1-(((float)i-129.0f)/128.0f);
+	uint32_t startI = (LookUpTableSize/2)+1;
+	for(uint32_t i = startI;i < LookUpTableSize;++i) {
+		colourTable[i*4+0] = 1-(((float)i-startI)/(LookUpTableSize/2));
 		colourTable[i*4+1] = 0.05f;
 		colourTable[i*4+2] = 0.4f;
 		colourTable[i*4+3] = 1;
 	}
 
-	bool encodeOkay = TinyImageFormat_EncodeLogicalPixelsF(TinyImageFormat_R10G10B10A2_UNORM, colourTable, 256, &encoded);
+	bool encodeOkay = TinyImageFormat_EncodeLogicalPixelsF(TinyImageFormat_R10G10B10A2_UNORM, colourTable, LookUpTableSize, &encoded);
 	if(!encodeOkay) {
 		return false;
 	}
@@ -181,7 +197,7 @@ static bool CreateSkyGradient(SynthWaveVizTests *svt) {
 	Render_TextureCreateDesc const createDesc = {
 		.format = TinyImageFormat_R10G10B10A2_UNORM,
 		.usageflags = Render_TUF_SHADER_READ,
-		.width = 256,
+		.width = LookUpTableSize,
 		.height = 1,
 		.depth = 1,
 		.slices = 1,
@@ -332,7 +348,6 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Update(SynthWaveVizTestsHandle ctx, double
 }
 
 AL2O3_EXTERN_C void SynthWaveVizTests_Render(SynthWaveVizTestsHandle ctx, Render_GraphicsEncoderHandle encoder) {
-
 	// no need to transition the depth texture at the moment...
 
 	Render_TextureHandle renderTargets[] = {ctx->colourTargetTexture, ctx->depthTargetTexture};
@@ -364,15 +379,8 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Composite(SynthWaveVizTestsHandle ctx,
 																								Render_GraphicsEncoderHandle encoder,
 																								Render_TextureHandle dest) {
 
-	Render_TextureHandle renderTargets[] = {dest};
-	Render_GraphicsEncoderBindRenderTargets(encoder,
-																					1,
-																					renderTargets,
-																					false,
-																					true,
-																					true);
-
 	TinyImageFormat destFormat = Render_TextureGetFormat(dest);
+
 	if (destFormat != ctx->currentDestFormat) {
 		Render_PipelineDestroy(ctx->renderer, ctx->compositePipeline);
 
@@ -395,11 +403,19 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Composite(SynthWaveVizTestsHandle ctx,
 
 		ctx->compositePipeline = Render_GraphicsPipelineCreate(ctx->renderer, &compositeGfxPipeDesc);
 		if (!Render_PipelineHandleIsValid(ctx->compositePipeline)) {
+			LOGERROR("Pipeline failed creation");
 			return;
 		}
 		ctx->currentDestFormat = destFormat;
 	}
 
+	Render_TextureHandle renderTargets[] = {dest};
+	Render_GraphicsEncoderBindRenderTargets(encoder,
+																					1,
+																					renderTargets,
+																					false,
+																					true,
+																					true);
 	Render_GraphicsEncoderBindDescriptorSet(encoder, ctx->compositeDescriptorSet, 0);
 	Render_GraphicsEncoderBindPipeline(encoder, ctx->compositePipeline);
 	Render_GraphicsEncoderDraw(encoder, 3, 0);
