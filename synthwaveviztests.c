@@ -146,7 +146,7 @@ static bool CreateSkyGradient(SynthWaveVizTests *svt) {
 	// TinyImageFormat_R10G10B10A2_UNORM to match background
 	// LookUpTableSize samples
 
-	static int const LookUpTableSize = 1024;
+#define LookUpTableSize 1024
 	uint32_t output[LookUpTableSize];
 	TinyImageFormat_EncodeOutput encoded = {
 			.pixel = output
