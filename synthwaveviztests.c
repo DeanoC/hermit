@@ -375,6 +375,7 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Render(SynthWaveVizTestsHandle ctx, Render
 	Render_GraphicsEncoderTransition(encoder, 0, NULL, NULL, 1, renderTargets, textureTransitions);
 
 }
+
 AL2O3_EXTERN_C void SynthWaveVizTests_Composite(SynthWaveVizTestsHandle ctx,
 																								Render_GraphicsEncoderHandle encoder,
 																								Render_TextureHandle dest) {
