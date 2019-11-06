@@ -50,5 +50,10 @@ void MeshModRenderTests::render(Render_GraphicsEncoderHandle encoder) {
 	MeshModRender_ManagerSetView(manager, &gpuView);
 
 	MeshModRender_MeshUpdate(manager, cubeRenderableMesh);
-	MeshModRender_MeshRender(manager, encoder, cubeRenderableMesh);
+
+	static float rotY = 0.0f;
+	Math_Mat4F cubeMatrix = Math_RotateYAxisMat4F(Math_DegreesToRadiansF(rotY));
+	MeshModRender_MeshRender(manager, encoder, cubeRenderableMesh, cubeMatrix);
+
+	rotY += 0.05f;
 }
