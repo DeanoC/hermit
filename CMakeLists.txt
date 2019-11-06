@@ -22,6 +22,8 @@ set(Src
 		main.cpp
 		visualdebugtests.cpp
 		synthwaveviztests.c
+		meshmodrendertests.cpp
+		meshmodrendertests.hpp
 		)
 if(APPLE)
 	list( APPEND Src Info.plist.in entitlements.plist)

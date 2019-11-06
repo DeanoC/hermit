@@ -18,6 +18,7 @@
 #include "al2o3_os/filesystem.h"
 
 #include "synthwaveviztests.h"
+#include "meshmodrendertests.hpp"
 
 extern void VisualDebugTests();
 
@@ -28,6 +29,9 @@ bool bDoVisualDebugTests = false;
 
 bool bDoSynthWaveVizTests = false;
 SynthWaveVizTestsHandle synthWaveVizTests;
+
+bool bDoMeshModRenderTests = false;
+MeshModRenderTests* meshModRenderTests;
 
 Render_RendererHandle renderer;
 Render_FrameBufferHandle frameBuffer;
@@ -69,6 +73,7 @@ static void ShowTestsFile() {
 	ImGui::Separator();
 	ImGui::Checkbox("Visual Debug Tests", &bDoVisualDebugTests);
 	ImGui::Checkbox("SynthWave viz tests", &bDoSynthWaveVizTests);
+	ImGui::Checkbox("MeshMod render tests", &bDoMeshModRenderTests);
 }
 
 static void ShowAppMainMenuBar() {
@@ -94,6 +99,8 @@ static bool Init() {
 	Os_GetCurrentDir(currentDir, 2048);
 	LOGINFO(currentDir);
 #endif
+
+	MeshMod_StartUp();
 
 	// setup basic input and map quit key
 	input = InputBasic_Create();
@@ -138,6 +145,12 @@ static bool Init() {
 }
 
 static void Resize() {
+	if(frameBuffer.handle.handle == 0)
+		return;
+
+	if(!Render_FrameBufferHandleIsValid(frameBuffer))
+		return;
+
 	GameAppShell_WindowDesc windowDesc;
 	GameAppShell_WindowGetCurrentDesc(&windowDesc);
 
@@ -164,6 +177,18 @@ static void Update(double deltaMS) {
 		gpuCaptureState = GpuCaptureState::StartCapturing;
 	}
 
+
+	Render_View view{
+			{0, 0, -9},
+			{0, 0, 0},
+			{0, 1, 0},
+
+			Math_DegreesToRadiansF(70.0f),
+			(float) windowDesc.width / (float) windowDesc.height,
+			1, 10000
+	};
+	Render_SetFrameBufferDebugView(frameBuffer, &view);
+
 	if(bDoVisualDebugTests) {
 		VisualDebugTests();
 	}
@@ -187,17 +212,24 @@ static void Update(double deltaMS) {
 		}
 	}
 
+	if(bDoMeshModRenderTests) {
+		if(!meshModRenderTests) {
+			meshModRenderTests = MeshModRenderTests::Create(renderer, frameBuffer);
+			if(!meshModRenderTests) {
+				LOGERROR("MeshModRenderTests::Create failed");
+				bDoMeshModRenderTests = false;
+			}
+		}
 
-	Render_View view{
-			{0, 0, -9},
-			{0, 0, 0},
-			{0, 1, 0},
-
-			Math_DegreesToRadiansF(70.0f),
-			(float) windowDesc.width / (float) windowDesc.height,
-			1, 10000
-	};
-	Render_SetFrameBufferDebugView(frameBuffer, &view);
+		if(meshModRenderTests) {
+			meshModRenderTests->update(deltaMS, view);
+		}
+	} else {
+		if(meshModRenderTests) {
+			MeshModRenderTests::Destroy(meshModRenderTests);
+			meshModRenderTests = nullptr;
+		}
+	}
 
 	ImGui::NewFrame();
 
@@ -226,6 +258,10 @@ static void Draw(double deltaMS) {
 		SynthWaveVizTests_Composite(synthWaveVizTests, graphicsEncoder, Render_FrameBufferColourTarget(frameBuffer));
 	}
 
+	if(bDoMeshModRenderTests && meshModRenderTests) {
+		meshModRenderTests->render(graphicsEncoder);
+	}
+
 	Render_FrameBufferPresent(frameBuffer);
 
 	if(gpuCaptureState == GpuCaptureState::Capturing) {
@@ -241,6 +277,11 @@ static void Exit() {
 	// framebuffer destroy will stall to all pipes are empty
 	Render_FrameBufferDestroy(renderer, frameBuffer);
 
+	if(meshModRenderTests) {
+		MeshModRenderTests::Destroy(meshModRenderTests);
+		meshModRenderTests = nullptr;
+	}
+
 	if(synthWaveVizTests) {
 		SynthWaveVizTests_Destroy(synthWaveVizTests);
 		synthWaveVizTests = nullptr;
@@ -252,6 +293,8 @@ static void Exit() {
 
 	enkiDeleteTaskScheduler(taskScheduler);
 	Render_RendererDestroy(renderer);
+
+	MeshMod_Shutdown();
 
 	SimpleLogManager_Free(g_logger);
 
@@ -273,7 +316,7 @@ static void ProcessMsg(void *msg) {
 int main(int argc, char const *argv[]) {
 	g_logger = SimpleLogManager_Alloc();
 
-	Memory_TrackerBreakOnAllocNumber = 0;
+//	Memory_TrackerBreakOnAllocNumber = 2141;
 
 	GameAppShell_Shell *shell = GameAppShell_Init();
 	shell->onInitCallback = &Init;

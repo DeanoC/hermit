@@ -32,6 +32,7 @@
     <mapping directory="$PROJECT_DIR$/../al2o3/render_basics_interface-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/render_meshmod-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/render_meshmodio-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../al2o3/render_meshmodrender-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/render_meshmodshapes-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/tiny_dds-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/tiny_imageformat-src" vcs="Git" />
