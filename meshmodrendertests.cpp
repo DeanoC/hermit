@@ -18,7 +18,7 @@ MeshModRenderTests* MeshModRenderTests::Create(Render_RendererHandle renderer, R
 		return nullptr;
 	}
 
-	mmrt->cubeMesh = MeshModShapes_CubeCreate({0});
+	mmrt->cubeMesh = MeshModShapes_DodecahedronCreate({0});
 	mmrt->cubeRenderableMesh = MeshModRender_MeshCreate(mmrt->manager, mmrt->cubeMesh);
 
 	return mmrt;
@@ -44,6 +44,10 @@ void MeshModRenderTests::update(double deltaMS, Render_View const& view) {
 	};
 
 	gpuView.worldToNDCMatrix = Math_MultiplyMat4F(gpuView.worldToViewMatrix, gpuView.viewToNDCMatrix);
+
+	static float rotY = 0.0f;
+	cubeMatrix = Math_RotateYAxisMat4F(Math_DegreesToRadiansF(rotY));
+	rotY += 20.0f * deltaMS;
 }
 
 void MeshModRenderTests::render(Render_GraphicsEncoderHandle encoder) {
@@ -51,9 +55,9 @@ void MeshModRenderTests::render(Render_GraphicsEncoderHandle encoder) {
 
 	MeshModRender_MeshUpdate(manager, cubeRenderableMesh);
 
-	static float rotY = 0.0f;
-	Math_Mat4F cubeMatrix = Math_RotateYAxisMat4F(Math_DegreesToRadiansF(rotY));
 	MeshModRender_MeshRender(manager, encoder, cubeRenderableMesh, cubeMatrix);
 
-	rotY += 0.05f;
+}
+void MeshModRenderTests::setStyle(MeshModRender_RenderStyle style) {
+	MeshModRender_MeshSetStyle(manager, cubeRenderableMesh, style);
 }

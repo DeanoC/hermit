@@ -31,6 +31,7 @@ bool bDoSynthWaveVizTests = false;
 SynthWaveVizTestsHandle synthWaveVizTests;
 
 bool bDoMeshModRenderTests = false;
+MeshModRender_RenderStyle meshModRenderStyle;
 MeshModRenderTests* meshModRenderTests;
 
 Render_RendererHandle renderer;
@@ -62,28 +63,43 @@ static void EnkiFree(void *userData, void *ptr) {
 	MEMORY_ALLOCATOR_FREE((Memory_Allocator *) userData, ptr);
 }
 
-static void ShowMenuFile() {
+static void ShowFileMenu() {
 	ImGui::Separator();
 	if (ImGui::MenuItem("Quit", "Alt+F4")) {
 		GameAppShell_Quit();
 	}
 }
 
-static void ShowTestsFile() {
+static void ShowTests() {
 	ImGui::Separator();
 	ImGui::Checkbox("Visual Debug Tests", &bDoVisualDebugTests);
 	ImGui::Checkbox("SynthWave viz tests", &bDoSynthWaveVizTests);
 	ImGui::Checkbox("MeshMod render tests", &bDoMeshModRenderTests);
 }
 
+static void ShowMeshModRenderStyles() {
+	ImGui::Separator();
+	auto backup = meshModRenderStyle;
+	ImGui::RadioButton("Face Colours", (int*)&meshModRenderStyle, (int)MMR_RS_FACE_COLOURS);
+	ImGui::RadioButton("Tri Colours", (int*)&meshModRenderStyle, (int)MMR_RS_TRIANGLE_COLOURS);
+	ImGui::RadioButton("Normal as Colour", (int*)&meshModRenderStyle, (int)MMR_RS_NORMAL);
+	if(backup != meshModRenderStyle) {
+		meshModRenderTests->setStyle(meshModRenderStyle);
+	}
+}
+
 static void ShowAppMainMenuBar() {
 	if (ImGui::BeginMainMenuBar()) {
 		if (ImGui::BeginMenu("File")) {
-			ShowMenuFile();
+			ShowFileMenu();
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("Tests")) {
-			ShowTestsFile();
+			ShowTests();
+			ImGui::EndMenu();
+		}
+		if(bDoMeshModRenderTests && ImGui::BeginMenu("Styles")) {
+			ShowMeshModRenderStyles();
 			ImGui::EndMenu();
 		}
 		ImGui::EndMainMenuBar();
@@ -219,6 +235,7 @@ static void Update(double deltaMS) {
 				LOGERROR("MeshModRenderTests::Create failed");
 				bDoMeshModRenderTests = false;
 			}
+			meshModRenderTests->setStyle(meshModRenderStyle);
 		}
 
 		if(meshModRenderTests) {
