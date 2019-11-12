@@ -41,6 +41,7 @@ set(Deps
 		utils_gameappshell_impl_basic
 		render_basics_interface
 		render_basics_impl_theforge
+		render_basicforward
 		render_meshmod
 		render_meshmodio
 		render_meshmodshapes

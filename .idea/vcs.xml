@@ -28,6 +28,7 @@
     <mapping directory="$PROJECT_DIR$/../al2o3/input_basic_impl_gainput-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/input_basic_interface-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/input_gainput-src" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/../al2o3/render_basicforward-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/render_basics_impl_theforge-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/render_basics_interface-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/../al2o3/render_meshmod-src" vcs="Git" />
