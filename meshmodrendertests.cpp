@@ -5,6 +5,7 @@
 #include "render_meshmodshapes/shapes.h"
 #include "render_meshmodrender/render.h"
 #include "meshmodrendertests.hpp"
+#include "al2o3_cadt/vector.hpp"
 
 MeshModRenderTests* MeshModRenderTests::Create(Render_RendererHandle renderer, Render_FrameBufferHandle frameBuffer) {
 
@@ -18,15 +19,30 @@ MeshModRenderTests* MeshModRenderTests::Create(Render_RendererHandle renderer, R
 		return nullptr;
 	}
 
-	mmrt->cubeMesh = MeshModShapes_DodecahedronCreate({0});
-	mmrt->cubeRenderableMesh = MeshModRender_MeshCreate(mmrt->manager, mmrt->cubeMesh);
+	mmrt->meshVector = Cadt::Vector<MeshModRenderMesh>::Create();
+
+	MeshModRenderMesh cube = {
+			MeshModShapes_DodecahedronCreate({0}),
+			{0, 0, 0},
+			{1, 1, 1},
+			{0, 0, 0},
+	};
+	cube.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, cube.mesh);
+	mmrt->meshVector->push(cube);
 
 	return mmrt;
 }
 void MeshModRenderTests::Destroy(MeshModRenderTests* mmrt) {
 
-	MeshModRender_MeshDestroy(mmrt->manager, mmrt->cubeRenderableMesh);
-	MeshMod_MeshDestroy(mmrt->cubeMesh);
+	for (uint32_t i = 0u; i < mmrt->meshVector->size(); ++i) {
+		auto mesh = mmrt->meshVector->at(i);
+
+		MeshModRender_MeshDestroy(mmrt->manager, mesh.renderableMesh);
+		MeshMod_MeshDestroy(mesh.mesh);
+	}
+
+	mmrt->meshVector->destroy();
+
 	MeshModRender_ManagerDestroy(mmrt->manager);
 
 	MEMORY_FREE(mmrt);
@@ -45,19 +61,34 @@ void MeshModRenderTests::update(double deltaMS, Render_View const& view) {
 
 	gpuView.worldToNDCMatrix = Math_MultiplyMat4F(gpuView.worldToViewMatrix, gpuView.viewToNDCMatrix);
 
-	static float rotY = 0.0f;
-	cubeMatrix = Math_RotateYAxisMat4F(Math_DegreesToRadiansF(rotY));
-	rotY += 20.0f * deltaMS;
+	for (uint32_t i = 0u; i < meshVector->size(); ++i) {
+		auto& mesh = meshVector->at(i);
+
+		Math_Mat4F translateMatrix = Math_TranslationMat4F(mesh.pos);
+		Math_Mat4F rotateMatrix = Math_RotateEulerXYZMat4F(mesh.eulerRots);
+		Math_Mat4F scaleMatrix = Math_ScaleMat4F(mesh.scale);
+
+		Math_Mat4F matrix = Math_MultiplyMat4F(translateMatrix, rotateMatrix);
+		mesh.matrix = Math_MultiplyMat4F(matrix, scaleMatrix);
+
+		mesh.eulerRots.y += 0.01f * (float)deltaMS;
+	}
 }
 
 void MeshModRenderTests::render(Render_GraphicsEncoderHandle encoder) {
 	MeshModRender_ManagerSetView(manager, &gpuView);
 
-	MeshModRender_MeshUpdate(manager, cubeRenderableMesh);
+	for (uint32_t i = 0u; i < meshVector->size(); ++i) {
+		auto mesh = meshVector->at(i);
 
-	MeshModRender_MeshRender(manager, encoder, cubeRenderableMesh, cubeMatrix);
+		MeshModRender_MeshUpdate(manager, mesh.renderableMesh);
+		MeshModRender_MeshRender(manager, encoder, mesh.renderableMesh, mesh.matrix);
+	}
 
 }
 void MeshModRenderTests::setStyle(MeshModRender_RenderStyle style) {
-	MeshModRender_MeshSetStyle(manager, cubeRenderableMesh, style);
+	for (uint32_t i = 0u; i < meshVector->size(); ++i) {
+		auto mesh = meshVector->at(i);
+		MeshModRender_MeshSetStyle(manager, mesh.renderableMesh, style);
+	}
 }

@@ -4,6 +4,20 @@
 #include "render_basics/api.h"
 #include "render_basics/view.h"
 #include "render_meshmodrender/render.h"
+#include "al2o3_cmath/vector.hpp"
+#include "al2o3_cadt/vector.hpp"
+
+struct MeshModRenderMesh {
+	MeshMod_MeshHandle mesh;
+
+	Math::Vec3F pos;
+	Math::Vec3F scale;
+	Math::Vec3F eulerRots;
+
+	MeshModRender_MeshHandle renderableMesh;
+	Math_Mat4F matrix;
+};
+
 class MeshModRenderTests {
 public:
 	static MeshModRenderTests* Create(Render_RendererHandle renderer, Render_FrameBufferHandle destination);
@@ -16,9 +30,7 @@ public:
 protected:
 	MeshModRender_Manager* manager;
 
-	Math_Mat4F cubeMatrix;
-	MeshMod_MeshHandle cubeMesh;
-	MeshModRender_MeshHandle cubeRenderableMesh;
+	Cadt::Vector<MeshModRenderMesh>* meshVector;
 
 	Render_GpuView gpuView;
 };
