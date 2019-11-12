@@ -21,14 +21,38 @@ MeshModRenderTests* MeshModRenderTests::Create(Render_RendererHandle renderer, R
 
 	mmrt->meshVector = Cadt::Vector<MeshModRenderMesh>::Create();
 
-	MeshModRenderMesh cube = {
-			MeshModShapes_DodecahedronCreate({0}),
-			{0, 0, 0},
-			{1, 1, 1},
-			{0, 0, 0},
-	};
-	cube.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, cube.mesh);
-	mmrt->meshVector->push(cube);
+	{
+		MeshModRenderMesh shape = {
+				MeshModShapes_CubeCreate({0}),
+				{4, 3, 0},
+				{1, 1, 1},
+				{0, 0, 0},
+		};
+		shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
+		mmrt->meshVector->push(shape);
+	}
+
+	{
+		MeshModRenderMesh shape = {
+				MeshModShapes_DodecahedronCreate({0}),
+				{4, -3, 0},
+				{1, 1, 1},
+				{0, 0, 0},
+		};
+		shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
+		mmrt->meshVector->push(shape);
+	}
+
+	{
+		MeshModRenderMesh shape = {
+				MeshModShapes_DiamondCreate({0}),
+				{-4, -3, 0},
+				{1, 1, 1},
+				{0, 0, 0},
+		};
+		shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
+		mmrt->meshVector->push(shape);
+	}
 
 	return mmrt;
 }
@@ -71,7 +95,7 @@ void MeshModRenderTests::update(double deltaMS, Render_View const& view) {
 		Math_Mat4F matrix = Math_MultiplyMat4F(translateMatrix, rotateMatrix);
 		mesh.matrix = Math_MultiplyMat4F(matrix, scaleMatrix);
 
-		mesh.eulerRots.y += 0.01f * (float)deltaMS;
+		mesh.eulerRots.y += 0.005f * (float)deltaMS;
 	}
 }
 
