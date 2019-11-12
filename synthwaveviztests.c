@@ -1,4 +1,5 @@
 #include "al2o3_platform/platform.h"
+#include "al2o3_platform/utf8.h"
 #include "al2o3_memory/memory.h"
 #include "al2o3_vfile/vfile.h"
 
@@ -58,8 +59,8 @@ static bool CreateComposite(SynthWaveVizTests *svt) {
 																										 "{\n"
 																										 "\treturn colourTexture.Sample(bilinearSampler, input.UV);\n"
 																										 "}\n";
-	VFile_Handle compositevfile = VFile_FromMemory(CompositeVertexShader, strlen(CompositeVertexShader) + 1, false);
-	VFile_Handle compositeffile = VFile_FromMemory(CompositeFragmentShader, strlen(CompositeFragmentShader) + 1, false);
+	VFile_Handle compositevfile = VFile_FromMemory(CompositeVertexShader, utf8size(CompositeVertexShader) + 1, false);
+	VFile_Handle compositeffile = VFile_FromMemory(CompositeFragmentShader, utf8size(CompositeFragmentShader) + 1, false);
 	svt->compositeShader = Render_CreateShaderFromVFile(svt->renderer, compositevfile, "VS_main", compositeffile, "FS_main");
 	VFile_Close(compositevfile);
 	VFile_Close(compositeffile);
@@ -128,8 +129,8 @@ static bool CreateSkyGradient(SynthWaveVizTests *svt) {
 																						"\tfloat4 sample = colourTexture.Sample(bilinearSampler, 1-input.UV.y);\n"
 																						"\treturn sample;\n"
 																						"}\n";
-	VFile_Handle vfile = VFile_FromMemory(VertexShader, strlen(VertexShader) + 1, false);
-	VFile_Handle ffile = VFile_FromMemory(FragmentShader, strlen(FragmentShader) + 1, false);
+	VFile_Handle vfile = VFile_FromMemory(VertexShader, utf8size(VertexShader) + 1, false);
+	VFile_Handle ffile = VFile_FromMemory(FragmentShader, utf8size(FragmentShader) + 1, false);
 	svt->skyGradientShader = Render_CreateShaderFromVFile(svt->renderer, vfile, "VS_main", ffile, "FS_main");
 	VFile_Close(vfile);
 	VFile_Close(ffile);
