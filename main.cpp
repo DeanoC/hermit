@@ -195,11 +195,11 @@ static void Update(double deltaMS) {
 
 
 	Render_View view{
-			{0, 0, -9},
+			{0, 0, -8},
 			{0, 0, 0},
 			{0, 1, 0},
 
-			Math_DegreesToRadiansF(70.0f),
+			Math_DegreesToRadiansF(90.0f),
 			(float) windowDesc.width / (float) windowDesc.height,
 			1, 10000
 	};

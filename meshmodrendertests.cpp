@@ -34,7 +34,7 @@ MeshModRenderTests* MeshModRenderTests::Create(Render_RendererHandle renderer, R
 
 	{
 		MeshModRenderMesh shape = {
-				MeshModShapes_DodecahedronCreate({0}),
+				MeshModShapes_IcosahedronCreate({0}),
 				{4, -3, 0},
 				{1, 1, 1},
 				{0, 0, 0},
@@ -46,7 +46,7 @@ MeshModRenderTests* MeshModRenderTests::Create(Render_RendererHandle renderer, R
 	{
 		MeshModRenderMesh shape = {
 				MeshModShapes_DiamondCreate({0}),
-				{-4, -3, 0},
+				{-4, 0, 0},
 				{1, 1, 1},
 				{0, 0, 0},
 		};

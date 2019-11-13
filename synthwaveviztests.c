@@ -391,16 +391,16 @@ AL2O3_EXTERN_C void SynthWaveVizTests_Composite(SynthWaveVizTestsHandle ctx,
 		Render_GraphicsPipelineDesc compositeGfxPipeDesc = {
 				.shader = ctx->compositeShader,
 				.rootSignature = ctx->compositeRootSignature,
-				.vertexLayout = NULL,
+				.rasteriserState = Render_GetStockRasterisationState(ctx->renderer, Render_SRS_NOCULL),
 				.blendState = Render_GetStockBlendState(ctx->renderer, Render_SBS_PM_PORTER_DUFF),
 				.depthState = Render_GetStockDepthState(ctx->renderer, Render_SDS_IGNORE),
-				.rasteriserState = Render_GetStockRasterisationState(ctx->renderer, Render_SRS_NOCULL),
 				.colourRenderTargetCount = 1,
 				.colourFormats = colourFormats,
 				.depthStencilFormat = TinyImageFormat_UNDEFINED,
 				.sampleCount = 1,
 				.sampleQuality = 0,
-				.primitiveTopo = Render_PT_TRI_LIST
+				.primitiveTopo = Render_PT_TRI_LIST,
+				.vertexLayout = NULL,
 		};
 
 		ctx->compositePipeline = Render_GraphicsPipelineCreate(ctx->renderer, &compositeGfxPipeDesc);
