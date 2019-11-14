@@ -21,10 +21,12 @@ MeshModRenderTests* MeshModRenderTests::Create(Render_RendererHandle renderer, R
 
 	mmrt->meshVector = Cadt::Vector<MeshModRenderMesh>::Create();
 
+	mmrt->registry = MeshMod_RegistryCreateWithDefaults();
+
 	{
 		MeshModRenderMesh shape = {
-				MeshModShapes_CubeCreate({0}),
-				{4, 3, 0},
+				MeshModShapes_TetrahedonCreate(mmrt->registry),
+				{-4, 3, 0},
 				{1, 1, 1},
 				{0, 0, 0},
 		};
@@ -34,8 +36,8 @@ MeshModRenderTests* MeshModRenderTests::Create(Render_RendererHandle renderer, R
 
 	{
 		MeshModRenderMesh shape = {
-				MeshModShapes_IcosahedronCreate({0}),
-				{4, -3, 0},
+				MeshModShapes_CubeCreate(mmrt->registry),
+				{-2, 3, 0},
 				{1, 1, 1},
 				{0, 0, 0},
 		};
@@ -45,8 +47,52 @@ MeshModRenderTests* MeshModRenderTests::Create(Render_RendererHandle renderer, R
 
 	{
 		MeshModRenderMesh shape = {
-				MeshModShapes_DiamondCreate({0}),
-				{-4, 0, 0},
+				MeshModShapes_DiamondCreate(mmrt->registry),
+				{-1, 0, 0},
+				{1, 1, 1},
+				{Math_DegreesToRadiansF(10.0f), 0, 0},
+		};
+		shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
+		mmrt->meshVector->push(shape);
+	}
+
+	{
+		MeshModRenderMesh shape = {
+				MeshModShapes_OctahedronCreate(mmrt->registry),
+				{ 0, 3, 0},
+				{1, 1, 1},
+				{0, 0, 0},
+		};
+		shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
+		mmrt->meshVector->push(shape);
+	}
+
+	{
+		MeshModRenderMesh shape = {
+				MeshModShapes_IcosahedronCreate(mmrt->registry),
+				{ 2, 3, 0},
+				{1, 1, 1},
+				{0, 0, 0},
+		};
+		shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
+		mmrt->meshVector->push(shape);
+	}
+
+	{
+		MeshModRenderMesh shape = {
+				MeshModShapes_DodecahedronCreate(mmrt->registry),
+				{ 4, 3, 0},
+				{1, 1, 1},
+				{0, 0, 0},
+		};
+		shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
+		mmrt->meshVector->push(shape);
+	}
+
+	{
+		MeshModRenderMesh shape = {
+				MeshModShapes_DiamondCreate(mmrt->registry),
+				{0, 0, 0},
 				{1, 1, 1},
 				{0, 0, 0},
 		};
@@ -65,6 +111,7 @@ void MeshModRenderTests::Destroy(MeshModRenderTests* mmrt) {
 		MeshMod_MeshDestroy(mesh.mesh);
 	}
 
+	MeshMod_RegistryDestroy(mmrt->registry);
 	mmrt->meshVector->destroy();
 
 	MeshModRender_ManagerDestroy(mmrt->manager);
@@ -95,6 +142,16 @@ void MeshModRenderTests::update(double deltaMS, Render_View const& view) {
 		Math_Mat4F matrix = Math_MultiplyMat4F(translateMatrix, rotateMatrix);
 		mesh.matrix = Math_MultiplyMat4F(matrix, scaleMatrix);
 
+		Math_Mat4F inverseTranslateMatrix = Math_TranslationMat4F(Math_SubVec3F({0}, mesh.pos));
+		Math_Mat4F inverseRotateMatrix = Math_RotateEulerXYZMat4F(Math_SubVec3F({0}, mesh.eulerRots));
+//		Math_Mat4F inverseScaleMatrix = Math_ScaleMat4F(mesh.scale);
+//		inverseScaleMatrix.v[0] = 1.0f / inverseScaleMatrix.v[0];
+//		inverseScaleMatrix.v[5] = 1.0f / inverseScaleMatrix.v[5];
+//		inverseScaleMatrix.v[9] = 1.0f / inverseScaleMatrix.v[9];
+
+		Math_Mat4F inverseMatrix = Math_MultiplyMat4F(inverseTranslateMatrix, inverseRotateMatrix);
+		mesh.inverseMatrix = inverseMatrix;//Math_MultiplyMat4F(inverseMatrix, inverseScaleMatrix);
+
 		mesh.eulerRots.y += 0.005f * (float)deltaMS;
 	}
 }
@@ -106,7 +163,7 @@ void MeshModRenderTests::render(Render_GraphicsEncoderHandle encoder) {
 		auto mesh = meshVector->at(i);
 
 		MeshModRender_MeshUpdate(manager, mesh.renderableMesh);
-		MeshModRender_MeshRender(manager, encoder, mesh.renderableMesh, mesh.matrix);
+		MeshModRender_MeshRender(manager, encoder, mesh.renderableMesh, mesh.matrix, mesh.inverseMatrix);
 	}
 
 }

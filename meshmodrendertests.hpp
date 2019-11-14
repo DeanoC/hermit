@@ -16,6 +16,7 @@ struct MeshModRenderMesh {
 
 	MeshModRender_MeshHandle renderableMesh;
 	Math_Mat4F matrix;
+	Math_Mat4F inverseMatrix;
 };
 
 class MeshModRenderTests {
@@ -31,6 +32,7 @@ protected:
 	MeshModRender_Manager* manager;
 
 	Cadt::Vector<MeshModRenderMesh>* meshVector;
+	MeshMod_RegistryHandle registry;
 
 	Render_GpuView gpuView;
 };
