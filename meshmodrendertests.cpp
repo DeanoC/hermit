@@ -23,76 +23,68 @@ MeshModRenderTests* MeshModRenderTests::Create(Render_RendererHandle renderer, R
 
 	mmrt->registry = MeshMod_RegistryCreateWithDefaults();
 
-	{
-		MeshModRenderMesh shape = {
-				MeshModShapes_TetrahedonCreate(mmrt->registry),
-				{-4, 3, 0},
-				{1, 1, 1},
-				{0, 0, 0},
-		};
-		shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
-		mmrt->meshVector->push(shape);
-	}
+	for(int i = 0;i < 3;i++) {
+		{
+			MeshModRenderMesh shape = {
+					MeshModShapes_TetrahedonCreate(mmrt->registry),
+					{-4, (float)i, 0},
+					{1, 1, 1},
+					{0, 0, 0},
+			};
+			shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
+			mmrt->meshVector->push(shape);
+		}
 
-	{
-		MeshModRenderMesh shape = {
-				MeshModShapes_CubeCreate(mmrt->registry),
-				{-2, 3, 0},
-				{1, 1, 1},
-				{0, 0, 0},
-		};
-		shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
-		mmrt->meshVector->push(shape);
-	}
+		{
+			MeshModRenderMesh shape = {
+					MeshModShapes_CubeCreate(mmrt->registry),
+					{-2, (float)i, 0},
+					{1, 1, 1},
+					{0, 0, 0},
+			};
+			shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
+			mmrt->meshVector->push(shape);
+		}
 
-	{
-		MeshModRenderMesh shape = {
-				MeshModShapes_DiamondCreate(mmrt->registry),
-				{-1, 0, 0},
-				{1, 1, 1},
-				{Math_DegreesToRadiansF(10.0f), 0, 0},
-		};
-		shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
-		mmrt->meshVector->push(shape);
-	}
+		{
+			MeshModRenderMesh shape = {
+					MeshModShapes_OctahedronCreate(mmrt->registry),
+					{0, (float)i, 0},
+					{1, 1, 1},
+					{0, 0, 0},
+			};
+			shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
+			mmrt->meshVector->push(shape);
+		}
 
-	{
-		MeshModRenderMesh shape = {
-				MeshModShapes_OctahedronCreate(mmrt->registry),
-				{ 0, 3, 0},
-				{1, 1, 1},
-				{0, 0, 0},
-		};
-		shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
-		mmrt->meshVector->push(shape);
-	}
+		{
+			MeshModRenderMesh shape = {
+					MeshModShapes_IcosahedronCreate(mmrt->registry),
+					{2, (float)i, 0},
+					{1, 1, 1},
+					{0, 0, 0},
+			};
+			shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
+			mmrt->meshVector->push(shape);
+		}
 
-	{
-		MeshModRenderMesh shape = {
-				MeshModShapes_IcosahedronCreate(mmrt->registry),
-				{ 2, 3, 0},
-				{1, 1, 1},
-				{0, 0, 0},
-		};
-		shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
-		mmrt->meshVector->push(shape);
-	}
+		{
+			MeshModRenderMesh shape = {
+					MeshModShapes_DodecahedronCreate(mmrt->registry),
+					{4, (float)i, 0},
+					{1, 1, 1},
+					{0, 0, 0},
+			};
+			shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
+			mmrt->meshVector->push(shape);
+		}
 
-	{
-		MeshModRenderMesh shape = {
-				MeshModShapes_DodecahedronCreate(mmrt->registry),
-				{ 4, 3, 0},
-				{1, 1, 1},
-				{0, 0, 0},
-		};
-		shape.renderableMesh = MeshModRender_MeshCreate(mmrt->manager, shape.mesh);
-		mmrt->meshVector->push(shape);
 	}
 
 	{
 		MeshModRenderMesh shape = {
 				MeshModShapes_DiamondCreate(mmrt->registry),
-				{0, 0, 0},
+				{0,-2, 0},
 				{1, 1, 1},
 				{0, 0, 0},
 		};
@@ -104,16 +96,17 @@ MeshModRenderTests* MeshModRenderTests::Create(Render_RendererHandle renderer, R
 }
 void MeshModRenderTests::Destroy(MeshModRenderTests* mmrt) {
 
-	for (uint32_t i = 0u; i < mmrt->meshVector->size(); ++i) {
-		auto mesh = mmrt->meshVector->at(i);
+	if (mmrt->meshVector) {
+		for (uint32_t i = 0u; i < mmrt->meshVector->size(); ++i) {
+			auto mesh = mmrt->meshVector->at(i);
 
-		MeshModRender_MeshDestroy(mmrt->manager, mesh.renderableMesh);
-		MeshMod_MeshDestroy(mesh.mesh);
+			MeshModRender_MeshDestroy(mmrt->manager, mesh.renderableMesh);
+			MeshMod_MeshDestroy(mesh.mesh);
+		}
+		mmrt->meshVector->destroy();
 	}
 
 	MeshMod_RegistryDestroy(mmrt->registry);
-	mmrt->meshVector->destroy();
-
 	MeshModRender_ManagerDestroy(mmrt->manager);
 
 	MEMORY_FREE(mmrt);

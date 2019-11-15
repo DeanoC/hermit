@@ -83,6 +83,7 @@ static void ShowMeshModRenderStyles() {
 	ImGui::RadioButton("Face Colours", (int*)&meshModRenderStyle, (int)MMR_RS_FACE_COLOURS);
 	ImGui::RadioButton("Tri Colours", (int*)&meshModRenderStyle, (int)MMR_RS_TRIANGLE_COLOURS);
 	ImGui::RadioButton("Normal as Colour", (int*)&meshModRenderStyle, (int)MMR_RS_NORMAL);
+	ImGui::RadioButton("Dot Colour", (int*)&meshModRenderStyle, (int)MMR_RS_DOT);
 	if(backup != meshModRenderStyle) {
 		meshModRenderTests->setStyle(meshModRenderStyle);
 	}
@@ -195,7 +196,7 @@ static void Update(double deltaMS) {
 
 
 	Render_View view{
-			{0, 0, -5},
+			{0, 0, -10},
 			{0, 0, 0},
 			{0, 1, 0},
 
