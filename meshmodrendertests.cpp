@@ -13,7 +13,10 @@ MeshModRenderTests* MeshModRenderTests::Create(Render_RendererHandle renderer, R
 	if(!mmrt) {
 		return nullptr;
 	}
-	mmrt->manager = MeshModRender_ManagerCreate(renderer, Render_FrameBufferColourFormat(frameBuffer), TinyImageFormat_UNDEFINED);
+	Render_ROPLayout frameBufferLayout;
+	Render_FrameBufferDescribeROPLayout(frameBuffer, &frameBufferLayout);
+
+	mmrt->manager = MeshModRender_ManagerCreate(renderer, &frameBufferLayout);
 	if(!mmrt->manager) {
 		Destroy(mmrt);
 		return nullptr;
