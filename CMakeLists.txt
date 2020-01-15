@@ -24,6 +24,8 @@ set(Src
 		synthwaveviztests.c
 		meshmodrendertests.cpp
 		meshmodrendertests.hpp
+		alife/world2d.cpp
+		alife/world2d.hpp
 		)
 if(APPLE)
 	list( APPEND Src Info.plist.in entitlements.plist)
