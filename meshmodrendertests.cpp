@@ -1,22 +1,18 @@
 // License Summary: MIT see LICENSE file
 #include "al2o3_platform/platform.h"
-#include "al2o3_memory/memory.h"
-#include "render_basics/framebuffer.h"
-#include "render_meshmodshapes/shapes.h"
-#include "render_meshmodrender/render.h"
-#include "al2o3_cadt/vector.hpp"
 #include "meshmodrendertests.hpp"
 
-MeshModRenderTests* MeshModRenderTests::Create(Render_RendererHandle renderer, Render_FrameBufferHandle frameBuffer) {
+#include "al2o3_memory/memory.h"
+#include "render_meshmodshapes/shapes.h"
+#include "al2o3_cadt/vector.hpp"
+
+MeshModRenderTests* MeshModRenderTests::Create(Render_RendererHandle renderer, Render_ROPLayout const * targetLayout) {
 
 	MeshModRenderTests* mmrt = (MeshModRenderTests*) MEMORY_CALLOC(1, sizeof(MeshModRenderTests));
 	if(!mmrt) {
 		return nullptr;
 	}
-	Render_ROPLayout frameBufferLayout;
-	Render_FrameBufferDescribeROPLayout(frameBuffer, &frameBufferLayout);
-
-	mmrt->manager = MeshModRender_ManagerCreate(renderer, &frameBufferLayout);
+	mmrt->manager = MeshModRender_ManagerCreate(renderer, targetLayout);
 	if(!mmrt->manager) {
 		Destroy(mmrt);
 		return nullptr;

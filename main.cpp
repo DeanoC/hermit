@@ -19,6 +19,7 @@
 
 #include "synthwaveviztests.h"
 #include "meshmodrendertests.hpp"
+#include "alife/alifetests.hpp"
 
 extern void VisualDebugTests();
 
@@ -33,6 +34,9 @@ SynthWaveVizTestsHandle synthWaveVizTests;
 bool bDoMeshModRenderTests = false;
 MeshModRender_RenderStyle meshModRenderStyle;
 MeshModRenderTests* meshModRenderTests;
+
+bool bDoALifeTests = false;
+ALifeTests* alifeTests = nullptr;
 
 Render_RendererHandle renderer;
 Render_FrameBufferHandle frameBuffer;
@@ -75,6 +79,7 @@ static void ShowTests() {
 	ImGui::Checkbox("Visual Debug Tests", &bDoVisualDebugTests);
 	ImGui::Checkbox("SynthWave viz tests", &bDoSynthWaveVizTests);
 	ImGui::Checkbox("MeshMod render tests", &bDoMeshModRenderTests);
+	ImGui::Checkbox("ALife tests", &bDoALifeTests);
 }
 
 static void ShowMeshModRenderStyles() {
@@ -231,7 +236,9 @@ static void Update(double deltaMS) {
 
 	if(bDoMeshModRenderTests) {
 		if(!meshModRenderTests) {
-			meshModRenderTests = MeshModRenderTests::Create(renderer, frameBuffer);
+			Render_ROPLayout ropLayout;
+			Render_FrameBufferDescribeROPLayout(frameBuffer, &ropLayout);
+			meshModRenderTests = MeshModRenderTests::Create(renderer, &ropLayout);
 			if(!meshModRenderTests) {
 				LOGERROR("MeshModRenderTests::Create failed");
 				bDoMeshModRenderTests = false;
@@ -246,6 +253,27 @@ static void Update(double deltaMS) {
 		if(meshModRenderTests) {
 			MeshModRenderTests::Destroy(meshModRenderTests);
 			meshModRenderTests = nullptr;
+		}
+	}
+
+	if(bDoALifeTests) {
+		if(!alifeTests) {
+			Render_ROPLayout ropLayout;
+			Render_FrameBufferDescribeROPLayout(frameBuffer, &ropLayout);
+			alifeTests = ALifeTests::Create(renderer, &ropLayout);
+			if(!alifeTests) {
+				LOGERROR("ALifeTest::Create failed");
+				bDoALifeTests = false;
+			}
+		}
+
+		if(alifeTests) {
+			alifeTests->update(deltaMS, view);
+		}
+	} else {
+		if(alifeTests) {
+			ALifeTests::Destroy(alifeTests);
+			alifeTests = nullptr;
 		}
 	}
 
@@ -280,6 +308,10 @@ static void Draw(double deltaMS) {
 		meshModRenderTests->render(graphicsEncoder);
 	}
 
+	if(bDoALifeTests && alifeTests) {
+		alifeTests->render(graphicsEncoder);
+	}
+
 	Render_FrameBufferPresent(frameBuffer);
 
 	if(gpuCaptureState == GpuCaptureState::Capturing) {
@@ -303,6 +335,11 @@ static void Exit() {
 	if(synthWaveVizTests) {
 		SynthWaveVizTests_Destroy(synthWaveVizTests);
 		synthWaveVizTests = nullptr;
+	}
+
+	if(alifeTests) {
+		ALifeTests::Destroy(alifeTests);
+		alifeTests = nullptr;
 	}
 
 	InputBasic_MouseDestroy(mouse);

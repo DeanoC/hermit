@@ -21,7 +21,7 @@ struct MeshModRenderMesh {
 
 class MeshModRenderTests {
 public:
-	static MeshModRenderTests* Create(Render_RendererHandle renderer, Render_FrameBufferHandle destination);
+	static MeshModRenderTests* Create(Render_RendererHandle renderer, Render_ROPLayout const * targetLayout);
 	static void Destroy(MeshModRenderTests* mmrt);
 
 	void update(double deltaMS, Render_View const& view);

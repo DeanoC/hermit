@@ -16,7 +16,12 @@ endif ()
 
 SET_MIN_VERSIONS()
 set(ProjectName hermit)
-project(${ProjectName})
+set(CMAKE_CUDA_COMPILER "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.2/bin/nvcc.exe")
+project(${ProjectName} C CXX CUDA)
+
+if ($ENV{CLION_IDE})
+	include_directories("C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.2\\include")
+endif ()
 
 set(Src
 		main.cpp
@@ -24,8 +29,12 @@ set(Src
 		synthwaveviztests.c
 		meshmodrendertests.cpp
 		meshmodrendertests.hpp
+		alife/cudacore.cu
+		alife/cudacore.hpp
 		alife/world2d.cpp
 		alife/world2d.hpp
+		alife/alifetests.cpp
+		alife/alifetests.hpp
 		)
 if(APPLE)
 	list( APPEND Src Info.plist.in entitlements.plist)
