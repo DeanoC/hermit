@@ -5,12 +5,12 @@ cbuffer View : register(b0, space1)
     float4x4 worldToNDCMatrix;
 };
 
-Texture2D foodTexture : register(t0, space1);
+//Texture2D foodTexture : register(t0, space1);
 
 struct VSInput
 {
     float4 Position : POSITION;
-    float2 uv : TEX_COORD0;
+    float2 uv : TEXCOORD0;
 };
 
 struct VSOutput {
@@ -22,7 +22,7 @@ VSOutput VS_main(VSInput input)
 {
     VSOutput result;
 
-    float fi = foodTexture.SampleLevel(pointSampler, input.uv, 0);
+    float fi = 0;//foodTexture.SampleLevel(pointSampler, input.uv, 0);
     float4 pos = input.Position;
     pos.y += fi;
 

@@ -55,7 +55,7 @@ World2DRender* MakeRenderable(World2D const* world, Render_RendererHandle render
 		for(int32_t x = -(int32_t)(world->width/2); x < (int32_t)(world->width/2);++x) {
 			curVertexPtr[0] = (float)x;
 			curVertexPtr[1] = 0.0f;
-			curVertexPtr[2] = (float)x;
+			curVertexPtr[2] = (float)y;
 			curVertexPtr[3] = (float)(x + world->width/2) / (float)(world->width-1);
 			curVertexPtr[4] = (float)y / (float)(world->height-1);
 			curVertexPtr += 5;
@@ -140,12 +140,12 @@ World2DRender* MakeRenderable(World2D const* world, Render_RendererHandle render
 		return nullptr;
 	}
 
-	VFile::ScopedFile vfile = VFile::FromFile("resources/poscolour_vertex.hlsl", Os_FM_Read);
+	VFile::ScopedFile vfile = VFile::FromFile("resources/alife/world2dmoe_vertex.hlsl", Os_FM_Read);
 	if (!vfile) {
 		DestroyRenderable(render);
 		return nullptr;
 	}
-	VFile::ScopedFile ffile = VFile::FromFile("resources/copycolour_fragment.hlsl", Os_FM_Read);
+	VFile::ScopedFile ffile = VFile::FromFile("resources/alife/world2dmoe_fragment.hlsl", Os_FM_Read);
 	if (!ffile) {
 		DestroyRenderable(render);
 		return nullptr;
@@ -173,7 +173,7 @@ World2DRender* MakeRenderable(World2D const* world, Render_RendererHandle render
 	Render_GraphicsPipelineDesc gfxPipeDesc{};
 	gfxPipeDesc.shader = render->shader;
 	gfxPipeDesc.rootSignature = render->rootSignature;
-	gfxPipeDesc.vertexLayout = Render_GetStockVertexLayout(render->renderer, Render_SVL_3D_COLOUR);
+	gfxPipeDesc.vertexLayout = Render_GetStockVertexLayout(render->renderer, Render_SVL_3D_UV);
 	gfxPipeDesc.blendState = Render_GetStockBlendState(render->renderer, Render_SBS_OPAQUE);
 	if(ropLayout->depthFormat == TinyImageFormat_UNDEFINED) {
 		gfxPipeDesc.depthState = Render_GetStockDepthState(render->renderer, Render_SDS_IGNORE);

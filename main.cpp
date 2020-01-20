@@ -49,7 +49,11 @@ enkiTaskSchedulerHandle taskScheduler;
 
 enum AppKey {
 	AppKey_Quit,
-	AppKey_GPUCapture
+	AppKey_GPUCapture,
+	AppKey_SlideLeft,
+	AppKey_SlideRight,
+	AppKey_Forward,
+	AppKey_Back,
 };
 
 enum class GpuCaptureState {
@@ -150,6 +154,10 @@ static bool Init() {
 	if (keyboard) {
 		InputBasic_MapToKey(input, AppKey_Quit, keyboard, InputBasic_Key_Escape);
 		InputBasic_MapToKey(input, AppKey_GPUCapture, keyboard, InputBasic_Key_Tab);
+		InputBasic_MapToKey(input, AppKey_SlideLeft, keyboard, InputBasic_Key_Left);
+		InputBasic_MapToKey(input, AppKey_SlideRight, keyboard, InputBasic_Key_Right);
+		InputBasic_MapToKey(input, AppKey_Forward, keyboard, InputBasic_Key_Up);
+		InputBasic_MapToKey(input, AppKey_Back, keyboard, InputBasic_Key_Down);
 	}
 	InputBasic_SetWindowSize(input, windowDesc.width, windowDesc.height);
 
@@ -199,17 +207,54 @@ static void Update(double deltaMS) {
 		gpuCaptureState = GpuCaptureState::StartCapturing;
 	}
 
+	using namespace Math;
+
+	static Vec3F viewPosition = {0, 0, -10};
+	static Vec3F viewLookAt = {0, 0, 0};
+	static Vec3F viewWorldUp = { 0, 1, 0 };
+
+	auto viewMatrix = Math_LookAtMat4F(viewPosition, viewLookAt, viewWorldUp);
+	Vec3F forwardVec = Vec3F::From(viewMatrix.col[2].v);
+	Vec3F slideVec = Vec3F::From(viewMatrix.col[0].v);
+
+	float const forwardRate = 0.002f * (float)deltaMS;
+	float const backRate = 0.001f * (float)deltaMS;
+	float const slideRate = 0.001f * (float)deltaMS;
+
+	Vec3F const forwardVel = forwardVec * forwardRate;
+	Vec3F const backVel = forwardVec * -backRate;
+	Vec3F const slideVel = slideVec * slideRate;
+
+	if(InputBasic_GetAsBool(input, AppKey_Forward)) {
+
+		viewPosition = viewPosition + forwardVel;
+		viewLookAt = viewLookAt + forwardVel;
+	}
+	if(InputBasic_GetAsBool(input, AppKey_Back)) {
+		viewPosition = viewPosition + backVel;
+		viewLookAt = viewLookAt + backVel;
+	}
+	if(InputBasic_GetAsBool(input, AppKey_SlideRight)) {
+		viewPosition = viewPosition + slideVel;
+		viewLookAt = viewLookAt + slideVel;
+	}
+	if(InputBasic_GetAsBool(input, AppKey_SlideLeft)) {
+		viewPosition = viewPosition - slideVel;
+		viewLookAt = viewLookAt - slideVel;
+	}
+
 
 	Render_View view{
-			{0, 0, -10},
-			{0, 0, 0},
-			{0, 1, 0},
+			viewPosition,
+			viewLookAt,
+			viewWorldUp,
 
 			Math_DegreesToRadiansF(45.0f),
 			(float) windowDesc.width / (float) windowDesc.height,
 			1, 10000
 	};
 	Render_SetFrameBufferDebugView(frameBuffer, &view);
+
 
 	if(bDoVisualDebugTests) {
 		VisualDebugTests();
