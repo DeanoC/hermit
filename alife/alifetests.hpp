@@ -8,11 +8,19 @@
 struct World2DRender {
 	Render_RendererHandle renderer;
 	Render_DescriptorSetHandle descriptorSet;
-	Render_BufferHandle indexBuffer;
-	Render_BufferHandle vertexBuffer;
 	Render_PipelineHandle pipeline;
 	Render_ShaderHandle shader;
 	Render_RootSignatureHandle rootSignature;
+
+	union {
+		Render_GpuView view;
+		uint8_t spacer[UNIFORM_BUFFER_MIN_SIZE];
+	} uniforms;
+
+	Render_BufferHandle uniformBuffer;
+	Render_BufferHandle indexBuffer;
+	Render_BufferHandle vertexBuffer;
+
 };
 
 class ALifeTests {
@@ -24,8 +32,6 @@ public:
 	void render(Render_GraphicsEncoderHandle encoder);
 
 protected:
-//	Cadt::Vector<MeshModRenderMesh>* meshVector;
-	Render_GpuView gpuView;
 
 	World2D* world2d;
 	World2DRender* worldRender;

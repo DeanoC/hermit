@@ -15,12 +15,7 @@
 
 namespace {
 
-void DestroyRenderable(World2DRender *render) {
-	if(!render) return;
-
-	Render_BufferDestroy(render->renderer, render->vertexBuffer);
-	MEMORY_FREE(render);
-}
+void DestroyRenderable(World2DRender *render);
 
 World2DRender* MakeRenderable(World2D const* world, Render_RendererHandle renderer, Render_ROPLayout const* ropLayout) {
 
@@ -134,6 +129,17 @@ World2DRender* MakeRenderable(World2D const* world, Render_RendererHandle render
 		MEMORY_FREE(indexData);
 	}
 
+	static Render_BufferUniformDesc const ubDesc{
+			sizeof(render->uniforms),
+			true
+	};
+
+	render->uniformBuffer = Render_BufferCreateUniform(render->renderer, &ubDesc);
+	if (!Render_BufferHandleIsValid(render->uniformBuffer)) {
+		DestroyRenderable(render);
+		return nullptr;
+	}
+
 	VFile::ScopedFile vfile = VFile::FromFile("resources/poscolour_vertex.hlsl", Os_FM_Read);
 	if (!vfile) {
 		DestroyRenderable(render);
@@ -183,6 +189,7 @@ World2DRender* MakeRenderable(World2D const* world, Render_RendererHandle render
 	gfxPipeDesc.primitiveTopo = Render_PT_TRI_LIST;
 	render->pipeline = Render_GraphicsPipelineCreate(render->renderer, &gfxPipeDesc);
 	if (!Render_PipelineHandleIsValid(render->pipeline)) {
+		DestroyRenderable(render);
 		return nullptr;
 	}
 
@@ -191,23 +198,46 @@ World2DRender* MakeRenderable(World2D const* world, Render_RendererHandle render
 			Render_DUF_PER_FRAME,
 			1
 	};
-	/*
-		render->descriptorSet = Render_DescriptorSetCreate(render->renderer, &setDesc);
-		if (!Render_DescriptorSetHandleIsValid(render->descriptorSet)) {
-			return false;
-		}
-		Render_DescriptorDesc params[1];
-		params[0].name = "View";
-		params[0].type = Render_DT_BUFFER;
-		params[0].buffer = manager->viewUniformBuffer;
-		params[0].offset = 0;
-		params[0].size = sizeof(manager->viewUniforms);
-		Render_DescriptorPresetFrequencyUpdated(material.descriptorSet, 0, 1, params);
-	*/
+	render->descriptorSet = Render_DescriptorSetCreate(render->renderer, &setDesc);
+	if (!Render_DescriptorSetHandleIsValid(render->descriptorSet)) {
+		DestroyRenderable(render);
+		return nullptr;
+	}
+
+	Render_DescriptorDesc params[1];
+	params[0].name = "View";
+	params[0].type = Render_DT_BUFFER;
+	params[0].buffer = render->uniformBuffer;
+	params[0].offset = 0;
+	params[0].size = sizeof(render->uniforms);
+	Render_DescriptorPresetFrequencyUpdated(render->descriptorSet, 0, 1, params);
+
 	return render;
 }
 
+void DestroyRenderable(World2DRender *render) {
+	if(!render) return;
+
+	Render_DescriptorSetDestroy(render->renderer, render->descriptorSet);
+	Render_PipelineDestroy(render->renderer, render->pipeline);
+	Render_ShaderDestroy(render->renderer, render->shader);
+	Render_RootSignatureDestroy(render->renderer, render->rootSignature);
+
+	Render_BufferDestroy(render->renderer, render->uniformBuffer);
+	Render_BufferDestroy(render->renderer, render->indexBuffer);
+	Render_BufferDestroy(render->renderer, render->vertexBuffer);
+
+	MEMORY_FREE(render);
+}
 void RenderWorld2D(World2D const * world, World2DRender* render, Render_GraphicsEncoderHandle encoder) {
+
+	// upload the uniforms
+	Render_BufferUpdateDesc uniformUpdate = {
+			&render->uniforms,
+			0,
+			sizeof(render->uniforms)
+	};
+	Render_BufferUpload(render->uniformBuffer, &uniformUpdate);
 
 	Render_GraphicsEncoderBindDescriptorSet(encoder, render->descriptorSet, 0);
 	Render_GraphicsEncoderBindIndexBuffer(encoder, render->indexBuffer, 0);
@@ -253,20 +283,23 @@ void ALifeTests::Destroy(ALifeTests* alt) {
 }
 
 void ALifeTests::update(double deltaMS, Render_View const& view) {
-	gpuView.worldToViewMatrix =	Math_LookAtMat4F(view.position, view.lookAt, view.upVector);
+	if(worldRender) {
+		worldRender->uniforms.view.worldToViewMatrix = Math_LookAtMat4F(view.position, view.lookAt, view.upVector);
 
-	float const f = 1.0f / tanf(view.perspectiveFOV / 2.0f);
-	gpuView.viewToNDCMatrix = {
-			f / view.perspectiveAspectWoverH, 0.0f, 0.0f, 0.0f,
-			0.0f, f, 0.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f,
-			0.0f, 0.0f, view.nearOffset, 0.0f
-	};
+		float const f = 1.0f / tanf(view.perspectiveFOV / 2.0f);
+		worldRender->uniforms.view.viewToNDCMatrix = {
+				f / view.perspectiveAspectWoverH, 0.0f, 0.0f, 0.0f,
+				0.0f, f, 0.0f, 0.0f,
+				0.0f, 0.0f, 0.0f, 1.0f,
+				0.0f, 0.0f, view.nearOffset, 0.0f
+		};
 
-	gpuView.worldToNDCMatrix = Math_MultiplyMat4F(gpuView.worldToViewMatrix, gpuView.viewToNDCMatrix);
-
+		worldRender->uniforms.view.worldToNDCMatrix = Math_MultiplyMat4F(worldRender->uniforms.view.worldToViewMatrix, worldRender->uniforms.view.viewToNDCMatrix);
+	}
 }
 
 void ALifeTests::render(Render_GraphicsEncoderHandle encoder) {
-
+	if(worldRender) {
+		RenderWorld2D(world2d, worldRender, encoder);
+	}
 }
