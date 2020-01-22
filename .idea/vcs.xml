@@ -2,8 +2,6 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/$USER_HOME$/builds/$PROJECT_NAME$/debug_build/_deps/al2o3-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/$USER_HOME$/builds/$PROJECT_NAME$/debug_build/_deps/lz4_lz4-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/al2o3/al2o3_cadt-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/al2o3/al2o3_cmath-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/al2o3/al2o3_enki-src" vcs="Git" />
@@ -45,7 +43,5 @@
     <mapping directory="$PROJECT_DIR$/al2o3/utils_gameappshell_interface-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/al2o3/utils_misccpp-src" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/al2o3/utils_simple_logmanager-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/al2o3-src" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/cmake-build-debug/_deps/lz4_lz4-src" vcs="Git" />
   </component>
 </project>

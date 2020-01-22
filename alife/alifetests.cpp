@@ -11,7 +11,8 @@
 #include "render_basics/graphicsencoder.h"
 #include "render_basics/rootsignature.h"
 #include "render_basics/shader.h"
-#include "cudacore.hpp"
+#include "accel_cuda.hpp"
+#include "accel_sycl.hpp"
 
 namespace {
 
@@ -256,11 +257,10 @@ ALifeTests* ALifeTests::Create(Render_RendererHandle renderer, Render_ROPLayout 
 		return nullptr;
 	}
 
-	alt->cudaCore = CUDACore_Create();
-	extern int testmain();
-	testmain();
+	alt->accelCuda = AccelCUDA_Create();
+	alt->accelSycl = AccelSycl_Create();
 
-		alt->world2d = World2D_Create(WT_MOE, 64, 64);
+	alt->world2d = World2D_Create(WT_MOE, 64, 64);
 	if(!alt->world2d) {
 		Destroy(alt);
 		return nullptr;
@@ -280,7 +280,9 @@ void ALifeTests::Destroy(ALifeTests* alt) {
 
 	DestroyRenderable(alt->worldRender);
 	World2D_Destroy(alt->world2d);
-	CUDACore_Destroy(alt->cudaCore);
+
+	AccelSycl_Destroy(alt->accelSycl);
+	AccelCUDA_Destroy(alt->accelCuda);
 	MEMORY_FREE(alt);
 }
 

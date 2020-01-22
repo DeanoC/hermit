@@ -1,5 +1,6 @@
 #include "al2o3_platform/platform.h"
 #include "al2o3_memory/memory.h"
+#include "accel_cuda.hpp"
 #include <cuda.h>
 
 inline int _ConvertSMVer2Cores(int major, int minor) {
@@ -105,7 +106,7 @@ struct Cuda {
 	int deviceIndex;
 };
 
-Cuda *CUDACore_Create() {
+Cuda *AccelCUDA_Create() {
 
 	int deviceCount;
 	int pickedDeviceIndex = -1;
@@ -155,7 +156,7 @@ Cuda *CUDACore_Create() {
 	return cuda;
 }
 
-void CUDACore_Destroy(Cuda *cuda) {
+void AccelCUDA_Destroy(Cuda *cuda) {
 	if(!cuda) return;
 
 	MEMORY_FREE(cuda);

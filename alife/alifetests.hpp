@@ -35,6 +35,7 @@ protected:
 
 	World2D* world2d;
 	World2DRender* worldRender;
-	struct Cuda* cudaCore;
+	struct Cuda* accelCuda;
+	struct Sycl* accelSycl;
 
 };

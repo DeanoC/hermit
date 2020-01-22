@@ -36,13 +36,14 @@ set(Src
 		synthwaveviztests.c
 		meshmodrendertests.cpp
 		meshmodrendertests.hpp
-		alife/cudacore.cu
-		alife/cudacore.hpp
+		alife/accel_cuda.cu
+		alife/accel_cuda.hpp
+		alife/accel_sycl.cpp
+		alife/accel_sycl.hpp
 		alife/world2d.cpp
 		alife/world2d.hpp
 		alife/alifetests.cpp
 		alife/alifetests.hpp
-		alife/core_sycl.cpp
 		)
 if(APPLE)
 	list( APPEND Src Info.plist.in entitlements.plist)
@@ -72,4 +73,4 @@ set(Deps
 		tiny_imageformat
 		)
 ADD_GUI_APP( ${ProjectName} "${Src}" "${Deps}")
-add_sycl_to_target(TARGET ${ProjectName} SOURCES alife/core_sycl.cpp)
+add_sycl_to_target(TARGET ${ProjectName} SOURCES alife/accel_sycl.cpp)

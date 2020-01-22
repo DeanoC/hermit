@@ -3,5 +3,5 @@
 
 struct Cuda;
 
-Cuda* CUDACore_Create();
-void CUDACore_Destroy(Cuda* cuda);
+Cuda* AccelCUDA_Create();
+void AccelCUDA_Destroy(Cuda* cuda);
