@@ -257,8 +257,10 @@ ALifeTests* ALifeTests::Create(Render_RendererHandle renderer, Render_ROPLayout 
 	}
 
 	alt->cudaCore = CUDACore_Create();
+	extern int testmain();
+	testmain();
 
-	alt->world2d = World2D_Create(WT_MOE, 64, 64);
+		alt->world2d = World2D_Create(WT_MOE, 64, 64);
 	if(!alt->world2d) {
 		Destroy(alt);
 		return nullptr;

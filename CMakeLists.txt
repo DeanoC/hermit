@@ -16,8 +16,15 @@ endif ()
 
 SET_MIN_VERSIONS()
 set(ProjectName hermit)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules)
+
+set(ComputeCpp_DIR "C:/Program Files/codeplay/computecpp")
 set(CMAKE_CUDA_COMPILER "C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.2/bin/nvcc.exe")
+# "spir64"
+set(COMPUTECPP_BITCODE "ptx64" CACHE STRING "Bitcode type to use as SYCL target in compute++")
+
 project(${ProjectName} C CXX CUDA)
+find_package(ComputeCpp REQUIRED)
 
 if ($ENV{CLION_IDE})
 	include_directories("C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.2\\include")
@@ -35,6 +42,7 @@ set(Src
 		alife/world2d.hpp
 		alife/alifetests.cpp
 		alife/alifetests.hpp
+		alife/core_sycl.cpp
 		)
 if(APPLE)
 	list( APPEND Src Info.plist.in entitlements.plist)
@@ -64,3 +72,4 @@ set(Deps
 		tiny_imageformat
 		)
 ADD_GUI_APP( ${ProjectName} "${Src}" "${Deps}")
+add_sycl_to_target(TARGET ${ProjectName} SOURCES alife/core_sycl.cpp)
